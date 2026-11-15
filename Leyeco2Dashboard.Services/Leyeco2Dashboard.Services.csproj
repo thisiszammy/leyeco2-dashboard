@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Leyeco2Dashboard.Data\Leyeco2Dashboard.Data.csproj" />
+  </ItemGroup>
+
+  <!-- The printouts: PDFs (QuestPDF, under its Community licence as the HRIS uses it) and Excel workbooks (ClosedXML),
+       at the versions the HRIS builds with. -->
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <PackageReference Include="QuestPDF" Version="2026.7.0" />
+  </ItemGroup>
+
+  <!-- The seal on the printouts' letterhead: the console's own 192px cut, linked so a new cut replaces it here too. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\Leyeco2Dashboard.Client\wwwroot\icon-192.png" Link="Reports\Assets\leyeco2-seal-192.png">
+      <LogicalName>Leyeco2Dashboard.Services.Logo.png</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- IBM Plex Sans Condensed (SIL Open Font License 1.1, Pdf/Fonts/OFL.txt), the console's face for figures and
+       headings, embedded so a PDF reads the same on every server. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Pdf\Fonts\IBMPlexSansCondensed-Regular.ttf">
+      <LogicalName>Leyeco2Dashboard.Services.Fonts.IBMPlexSansCondensed-Regular.ttf</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Pdf\Fonts\IBMPlexSansCondensed-Medium.ttf">
+      <LogicalName>Leyeco2Dashboard.Services.Fonts.IBMPlexSansCondensed-Medium.ttf</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Pdf\Fonts\IBMPlexSansCondensed-SemiBold.ttf">
+      <LogicalName>Leyeco2Dashboard.Services.Fonts.IBMPlexSansCondensed-SemiBold.ttf</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Pdf\Fonts\IBMPlexSansCondensed-Bold.ttf">
+      <LogicalName>Leyeco2Dashboard.Services.Fonts.IBMPlexSansCondensed-Bold.ttf</LogicalName>
+    </EmbeddedResource>
+    <None Include="Pdf\Fonts\OFL.txt" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,85 @@
+/* AppFooter — the shell's status line at the foot of the content area.
+   Kept intentionally quiet: hairline top border, 11px type, one gold tick. */
+.app-footer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    /* The band's height; a line that must fold (a phone, MainLayout) grows it rather than clip a name. */
+    min-height: var(--statusbar-h);
+    padding: 0 var(--page-pad-x);
+    background: var(--white);
+    border-top: 1px solid var(--slate-200);
+    font-family: var(--font-body);
+    font-size: var(--fs-micro);
+    color: var(--slate-500);
+}
+
+.footer-legal {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The copyright gives way first: the credit keeps its full width while there is a copyright to drop. */
+.footer-credit {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-shrink: 0;
+    line-height: 14px;
+}
+
+.credit-label {
+    white-space: nowrap;
+    color: var(--slate-500);
+}
+
+/* The one signature: a gold diamond that marks the credit and ties the
+   footer to the login sign-off. A mark, not decoration — it precedes the credit. */
+.credit-tick {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    margin-right: 6px;
+    vertical-align: middle;
+    background: var(--gold-primary);
+    border-radius: 1px;
+    transform: rotate(45deg);
+}
+
+/* The names: each whole, the "&" in the label's voice. A short line folds before "& …",
+   and the second name starts under the first. */
+.credit-names {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 4px;
+    min-width: 0;
+}
+
+.credit-pair {
+    white-space: nowrap;
+}
+
+.credit-name {
+    white-space: nowrap;
+    color: var(--slate-700);
+    font-weight: 600;
+}
+
+/* Narrow viewports: drop the copyright before the credit ever folds. */
+@media (max-width: 640px) {
+    .app-footer {
+        padding: 0 12px;
+    }
+
+    .footer-legal {
+        display: none;
+    }
+
+    .footer-credit {
+        flex-shrink: 1;
+        min-width: 0;
+    }
+}

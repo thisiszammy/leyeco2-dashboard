@@ -1,0 +1,32 @@
+/* UserAccessModal — as wide as the access sheet's two columns of permissions need; the body
+   scrolls between a header and a footer that stay put, so the tally and Save are always in view. */
+.modal.user-access-modal {
+    width: 860px;
+    overflow: hidden;
+}
+
+    .modal.user-access-modal .modal-body {
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+.user-access-tally {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: auto;
+    min-width: 0;
+    font-size: var(--fs-label);
+    line-height: 16px;
+    color: var(--slate-600);
+    font-variant-numeric: tabular-nums;
+}
+
+    .user-access-tally.is-none {
+        color: #B45309;
+    }
+
+    .user-access-tally ::deep i {
+        flex: none;
+        font-size: 11px;
+    }

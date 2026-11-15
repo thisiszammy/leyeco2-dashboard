@@ -1,0 +1,47 @@
+@namespace Leyeco2Dashboard.Client.Components.Shared
+
+@* One cell of a page's key-figure strip: place it inside <div class="kpi-strip"> (app.css).
+   The label line (tone icon, label, badge) sits over the figure and its context line. *@
+<div class="@CssClass">
+    <div class="stat-head">
+        @if (!string.IsNullOrEmpty(IconName))
+        {
+            <span class="stat-icon @IconToneClass"><Icon Name="@IconName" /></span>
+        }
+        <span class="stat-label" title="@Label">@Label</span>
+        @if (!string.IsNullOrEmpty(BadgeText))
+        {
+            <span class="card-badge @BadgeToneClass stat-badge">@BadgeText</span>
+        }
+    </div>
+    <div class="stat-body">
+        <span class="stat-value">@Value</span>
+        @if (!string.IsNullOrEmpty(Sub))
+        {
+            <span class="stat-sub" title="@Sub">@Sub</span>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>Red marks the strip's headline cell (net pay, a live selection).</summary>
+    public enum KpiVariant { Default, Accent }
+
+    [Parameter] public KpiVariant Variant { get; set; } = KpiVariant.Default;
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public string? Sub { get; set; }
+    [Parameter] public string? IconName { get; set; }
+
+    /// <summary>Background tone for the icon: brand, gold, red, amber, blue, green, pink, or empty (default slate).</summary>
+    [Parameter] public string IconTone { get; set; } = "";
+
+    [Parameter] public string? BadgeText { get; set; }
+
+    /// <summary>Badge tone: green, red, amber, blue, gray.</summary>
+    [Parameter] public string BadgeTone { get; set; } = "gray";
+
+    private string CssClass => Variant == KpiVariant.Accent ? "stat stat-accent" : "stat";
+    private string IconToneClass => string.IsNullOrEmpty(IconTone) ? "" : IconTone;
+    private string BadgeToneClass => $"badge-{BadgeTone}";
+}

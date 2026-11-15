@@ -1,0 +1,242 @@
+@namespace Leyeco2Dashboard.Client.Components.Shared.Charts
+
+@* Columns over a shared baseline, each split by series, bottom to top in the series' order (the first series on
+   the baseline, where its column is easiest to compare). One tab stop: focused, the arrow keys walk the columns
+   and the tooltip and a live region read the one in hand; the mouse does the same on hover. ShowTable swaps the
+   plot for its figures, footed, which is also what a screen reader is pointed to. *@
+@if (ShowTable)
+{
+    <div class="sc-table-wrap">
+        <table class="sc-table">
+            <caption class="sr-only">@AriaLabel</caption>
+            <thead>
+                <tr>
+                    <th scope="col">@TableHead</th>
+                    @foreach (var series in Series)
+                    {
+                        <th scope="col" class="num"><span class="swatch-dot" style="--swatch:@series.Color" aria-hidden="true"></span> @series.Label</th>
+                    }
+                    <th scope="col" class="num">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var column in Columns.Where(column => !SkipEmptyRows || column.Total > 0))
+                {
+                    <tr class="@(column.Total == 0 ? "is-empty" : null)">
+                        <th scope="row" title="@column.Title">@(column.RowTitle ?? column.Title)</th>
+                        @foreach (var value in column.Values)
+                        {
+                            <td class="num">@(value == 0 ? "—" : ValueFormat(value))</td>
+                        }
+                        <td class="num sc-row-total">@(column.Total == 0 ? "—" : ValueFormat(column.Total))</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot class="ledger-foot">
+                <tr>
+                    <th scope="row">Total</th>
+                    @for (var s = 0; s < Series.Count; s++)
+                    {
+                        var index = s;
+                        <td class="num">@ValueFormat(Columns.Sum(column => column.Values[index]))</td>
+                    }
+                    <td class="num">@ValueFormat(Columns.Sum(column => column.Total))</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+else
+{
+    <div class="sc" style="--cols:@Columns.Count">
+        <div class="sc-frame">
+            <div class="sc-yaxis" aria-hidden="true">
+                @foreach (var tick in _ticks)
+                {
+                    <span style="bottom:@ChartMath.Css(Height(tick))%">@AxisFormat(tick)</span>
+                }
+            </div>
+
+            <div class="sc-plot"
+                 tabindex="0"
+                 role="group"
+                 aria-label="@($"{AriaLabel}. Use the left and right arrow keys to read each {ColumnNoun}.")"
+                 @onkeydown="OnKeyDown"
+                 @onfocus="OnFocus"
+                 @onblur="Clear"
+                 @onmouseleave="OnMouseLeave">
+                <div class="sc-grid" aria-hidden="true">
+                    @foreach (var tick in _ticks.Skip(1))
+                    {
+                        <i style="bottom:@ChartMath.Css(Height(tick))%"></i>
+                    }
+                </div>
+
+                <div class="sc-cols" aria-hidden="true">
+                    @for (var i = 0; i < Columns.Count; i++)
+                    {
+                        var index = i;
+                        var column = Columns[i];
+                        var total = column.Total;
+                        <div class="sc-col @(index == _active ? "is-active" : null)" @onmouseenter="() => Activate(index)">
+                            @if (total > 0)
+                            {
+                                <div class="sc-stack" style="height:@ChartMath.Css(Height(total))%">
+                                    @for (var s = 0; s < Series.Count; s++)
+                                    {
+                                        if (column.Values[s] > 0)
+                                        {
+                                            <span class="sc-seg" style="flex-grow:@ChartMath.Css(column.Values[s] / total * 100);background:@Series[s].Color"></span>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (_active is int active && active < Columns.Count)
+                {
+                    var column = Columns[active];
+                    <div class="sc-tip is-@Side(active)" style="left:@ChartMath.Css(TipAnchor(active))%" aria-hidden="true">
+                        <div class="sc-tip-head">@column.Title</div>
+                        @for (var s = Series.Count - 1; s >= 0; s--)
+                        {
+                            <div class="sc-tip-row @(column.Values[s] == 0 ? "is-zero" : null)">
+                                <span class="swatch-dot" style="--swatch:@Series[s].Color"></span>
+                                <span class="sc-tip-label">@Series[s].Label</span>
+                                <span class="sc-tip-value">@(column.Values[s] == 0 ? "—" : ValueFormat(column.Values[s]))</span>
+                            </div>
+                        }
+                        <div class="sc-tip-row sc-tip-total">
+                            <span class="sc-tip-label">Total</span>
+                            <span class="sc-tip-value">@ValueFormat(column.Total)</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="sc-xaxis" aria-hidden="true">
+            @foreach (var column in Columns)
+            {
+                <span class="@(column.Quiet ? "is-quiet" : null) @(column.MinorLabel ? "is-minor" : null)">@column.AxisLabel</span>
+            }
+        </div>
+
+        <ul class="sc-legend" aria-label="Key">
+            @foreach (var series in Series)
+            {
+                <li><span class="swatch-dot" style="--swatch:@series.Color" aria-hidden="true"></span>@series.Label</li>
+            }
+        </ul>
+
+        <div class="sr-only" aria-live="polite">@Announcement</div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ChartSeries> Series { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<ChartColumn> Columns { get; set; } = [];
+
+    /// <summary>What the chart shows, for screen readers and the table's caption: "Collections by day, Jun 1 – 6, 2026".</summary>
+    [Parameter] public string AriaLabel { get; set; } = "Chart";
+
+    /// <summary>What one column is, for the keyboard hint: "day", "hour".</summary>
+    [Parameter] public string ColumnNoun { get; set; } = "column";
+
+    /// <summary>The table's first column heading: "Day", "Hour".</summary>
+    [Parameter] public string TableHead { get; set; } = "";
+
+    [Parameter] public bool ShowTable { get; set; }
+
+    /// <summary>Leave the columns with nothing in them out of the table (the hours the counters are closed).</summary>
+    [Parameter] public bool SkipEmptyRows { get; set; }
+
+    /// <summary>Counts, not amounts: the axis steps by whole numbers.</summary>
+    [Parameter] public bool WholeNumbers { get; set; }
+
+    [Parameter] public Func<decimal, string> ValueFormat { get; set; } = value => value.ToString("N0");
+    [Parameter] public Func<decimal, string> AxisFormat { get; set; } = value => value.ToString("N0");
+
+    private IReadOnlyList<decimal> _ticks = [0m, 1m];
+    private decimal _top = 1m;
+    private int? _active;
+    private int? _lastActive;
+
+    protected override void OnParametersSet()
+    {
+        var max = Columns.Count == 0 ? 0 : Columns.Max(column => column.Total);
+        _ticks = ChartMath.Ticks(max, WholeNumbers);
+        _top = _ticks[^1] <= 0 ? 1 : _ticks[^1];
+
+        if (_active >= Columns.Count)
+            _active = null;
+        if (_lastActive >= Columns.Count)
+            _lastActive = null;
+    }
+
+    private decimal Height(decimal value) => Math.Clamp(value / _top * 100m, 0m, 100m);
+
+    // The tooltip stands beside its column, never over it: after it in the plot's left part, before it in the
+    // right, so it always opens toward the room.
+    private bool OpensAfter(int index) => ((decimal)index + 0.5m) / Math.Max(Columns.Count, 1) < 0.6m;
+
+    private string Side(int index) => OpensAfter(index) ? "after" : "before";
+
+    private decimal TipAnchor(int index)
+        => (OpensAfter(index) ? index + 1 : index) * 100m / Math.Max(Columns.Count, 1);
+
+    private void Activate(int index)
+    {
+        _active = index;
+        _lastActive = index;
+    }
+
+    private void OnMouseLeave() => _active = null;
+
+    private void Clear() => _active = null;
+
+    // The keyboard starts where it last was, else on the latest column that holds anything: the present, mostly.
+    private void OnFocus()
+    {
+        if (Columns.Count == 0)
+            return;
+
+        var latest = Enumerable.Range(0, Columns.Count).LastOrDefault(i => Columns[i].Total > 0, Columns.Count - 1);
+        Activate(_lastActive ?? latest);
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (Columns.Count == 0)
+            return;
+
+        var current = _active ?? _lastActive ?? 0;
+        switch (e.Key)
+        {
+            case "ArrowRight":
+                Activate(Math.Min(current + 1, Columns.Count - 1));
+                break;
+            case "ArrowLeft":
+                Activate(Math.Max(current - 1, 0));
+                break;
+            case "Escape":
+                _active = null;
+                break;
+        }
+    }
+
+    private string Announcement
+    {
+        get
+        {
+            if (_active is not int active || active >= Columns.Count)
+                return string.Empty;
+
+            var column = Columns[active];
+            var parts = Series.Select((series, s) => $"{series.Label} {(column.Values[s] == 0 ? "none" : ValueFormat(column.Values[s]))}");
+            return $"{column.Title}: {ValueFormat(column.Total)} in all. {string.Join(", ", parts)}.";
+        }
+    }
+}

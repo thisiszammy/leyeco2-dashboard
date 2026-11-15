@@ -1,0 +1,126 @@
+@namespace Leyeco2Dashboard.Client.Features.Users.Components
+
+@* Confirms taking an account's sign-in away, or giving it back. *@
+@if (IsOpen && User is not null)
+{
+<SectionContent SectionName="overlay">
+    <div class="modal-overlay">
+        <div class="modal"
+             role="dialog"
+             aria-modal="true"
+             aria-label="@Title"
+             @onclick:stopPropagation
+             @onkeydown="HandleKeyDownAsync">
+
+            <div class="modal-header">
+                <h3>@Title</h3>
+                <button type="button" class="modal-close-btn" aria-label="Close dialog" disabled="@Busy" @onclick="RequestCloseAsync">
+                    <Icon Name="x" />
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="modal-confirm">
+                    <div class="icon-wrap @(Activate ? "is-neutral" : null)"><Icon Name="@(Activate ? "userCheck" : "userSlash")" /></div>
+                    <h4>@(Activate ? "Reactivate this account?" : "Deactivate this account?")</h4>
+                    <p>
+                        <span class="target">@Name</span>
+                        @if (Activate)
+                        {
+                            <text> will be able to sign in again as <span class="target">@User.Username</span>, with the password and the access the account had.</text>
+                        }
+                        else
+                        {
+                            <text> will be signed out wherever <span class="target">@User.Username</span> is signed in, and can't sign in again until the account is reactivated. Its access and its history are kept.</text>
+                        }
+                    </p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="modal-error" role="alert">
+                        <Icon Name="warning" />
+                        <span>@ErrorMessage</span>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" disabled="@Busy" @ref="_cancelButton" @onclick="RequestCloseAsync">Cancel</button>
+                <button type="button" class="btn @(Activate ? "btn-primary" : "btn-danger")" disabled="@Busy" @onclick="HandleConfirmAsync">
+                    @if (Busy)
+                    {
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                        <span>@(Activate ? "Reactivating…" : "Deactivating…")</span>
+                    }
+                    else
+                    {
+                        <Icon Name="@(Activate ? "userCheck" : "userSlash")" />
+                        <span>@(Activate ? "Reactivate" : "Deactivate")</span>
+                    }
+                </button>
+            </div>
+
+        </div>
+    </div>
+</SectionContent>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public UserDto? User { get; set; }
+
+    /// <summary>True to give the sign-in back, false to take it away.</summary>
+    [Parameter] public bool Activate { get; set; }
+
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private bool _wasOpen;
+    private bool _focusPending;
+    private ElementReference _cancelButton;
+
+    private string Title => Activate ? "Reactivate User" : "Deactivate User";
+
+    private string Name => string.IsNullOrWhiteSpace(User?.FullName) ? User?.Username ?? "" : User.FullName;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen == _wasOpen)
+            return;
+
+        _wasOpen = IsOpen;
+        _focusPending = IsOpen;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Cancel takes the keyboard: Enter on a dialog that just opened must not deactivate anyone.
+        if (_focusPending && IsOpen)
+        {
+            _focusPending = false;
+            try { await _cancelButton.FocusAsync(); }
+            catch { /* element may not be rendered yet on a fast close — never crash over focus */ }
+        }
+    }
+
+    private async Task RequestCloseAsync()
+    {
+        if (Busy) return;
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            await RequestCloseAsync();
+    }
+
+    private async Task HandleConfirmAsync()
+    {
+        if (Busy) return;
+        await OnConfirm.InvokeAsync();
+    }
+}

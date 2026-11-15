@@ -1,0 +1,428 @@
+@page "/login"
+@layout Leyeco2Dashboard.Client.Layout.EmptyLayout
+@namespace Leyeco2Dashboard.Client.Features.Authentication.Pages
+@inject NavigationManager Nav
+@inject AuthApiClient Auth
+@inject SessionAuthenticationStateProvider AuthState
+
+<PageTitle>Sign in — Leyeco II Transaction Monitor</PageTitle>
+
+@if (_checking)
+{
+    <div class="login-boot">
+        <div class="app-loading-spinner"></div>
+    </div>
+}
+else
+{
+    <div class="login-page">
+        <section class="login-left">
+            <div class="login-logo-row">
+                <div class="icon">
+                    <img src="leyeco2-logo.png" alt="Leyeco II" />
+                </div>
+                <div>
+                    <h1>Leyeco II</h1>
+                    <span>Transaction Monitor</span>
+                </div>
+            </div>
+
+            <div class="login-form">
+                @if (_settingPassword)
+                {
+                <h2>Set a new password</h2>
+                <p id="new-password-lead">An administrator set the password for <strong class="login-account">@_username.Trim()</strong>. Choose one only you know to finish signing in.</p>
+
+                <form @onsubmit="HandleNewPasswordAsync" @onsubmit:preventDefault>
+                    @* Lets a password manager file the new password under the right account. *@
+                    <input class="sr-only" type="text" autocomplete="username" tabindex="-1" aria-hidden="true" readonly value="@_username.Trim()" />
+
+                    <div class="field-group">
+                        <label for="new-password">New password</label>
+                        <div class="field-control has-toggle @(_error is not null ? "has-error" : "")">
+                            <span class="field-icon">
+                                <Icon Name="key" />
+                            </span>
+                            <input id="new-password"
+                                   type="@(_showPassword ? "text" : "password")"
+                                   autocomplete="new-password"
+                                   maxlength="@PasswordRules.MaxLength"
+                                   aria-describedby="new-password-lead new-password-hint"
+                                   @ref="_newPasswordInput"
+                                   @bind="_newPassword"
+                                   @bind:event="oninput"
+                                   disabled="@_busy" />
+                            <button type="button"
+                                    class="field-toggle"
+                                    aria-label="@(_showPassword ? "Hide passwords" : "Show passwords")"
+                                    aria-pressed="@(_showPassword ? "true" : "false")"
+                                    disabled="@_busy"
+                                    @onclick="TogglePassword">
+                                <Icon Name="@(_showPassword ? "eyeSlash" : "eye")" />
+                            </button>
+                        </div>
+                        <div class="field-hint" id="new-password-hint">@PasswordRules.Hint</div>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="confirm-password">Type it again</label>
+                        <div class="field-control @(_error is not null ? "has-error" : "")">
+                            <span class="field-icon">
+                                <Icon Name="key" />
+                            </span>
+                            <input id="confirm-password"
+                                   type="@(_showPassword ? "text" : "password")"
+                                   autocomplete="new-password"
+                                   maxlength="@PasswordRules.MaxLength"
+                                   @bind="_confirmPassword"
+                                   @bind:event="oninput"
+                                   disabled="@_busy" />
+                        </div>
+                    </div>
+
+                    @if (_error is not null)
+                    {
+                        <div class="login-error" role="alert" aria-live="assertive">
+                            <Icon Name="warning" />
+                            <span>@_error</span>
+                        </div>
+                    }
+
+                    <button type="submit" class="login-btn" disabled="@_busy">
+                        @if (_busy)
+                        {
+                            <span class="login-spinner" aria-hidden="true"></span>
+                            <span>Saving…</span>
+                        }
+                        else
+                        {
+                            <span>Set password and sign in</span>
+                            <Icon Name="arrowRight" />
+                        }
+                    </button>
+                </form>
+
+                <button type="button" class="login-back" disabled="@_busy" @onclick="BackToSignIn">
+                    <Icon Name="chevronLeft" />
+                    <span>Back to sign in</span>
+                </button>
+                }
+                else
+                {
+                <h2>Sign in</h2>
+                <p>Monitor and reconcile LEYECO II's transactions in one place.</p>
+
+                <form @onsubmit="HandleLoginAsync" @onsubmit:preventDefault>
+                    <div class="field-group">
+                        <label for="username">Username</label>
+                        <div class="field-control @(_error is not null ? "has-error" : "")">
+                            <span class="field-icon">
+                                <Icon Name="userCircle" />
+                            </span>
+                            <input id="username"
+                                   type="text"
+                                   autocomplete="username"
+                                   spellcheck="false"
+                                   placeholder="e.g. j.delacruz"
+                                   @ref="_usernameInput"
+                                   @bind="_username"
+                                   @bind:event="oninput"
+                                   disabled="@_busy" />
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="password">Password</label>
+                        <div class="field-control has-toggle @(_error is not null ? "has-error" : "")">
+                            <span class="field-icon">
+                                <Icon Name="lock" />
+                            </span>
+                            <input id="password"
+                                   type="@(_showPassword ? "text" : "password")"
+                                   autocomplete="current-password"
+                                   placeholder="Enter your password"
+                                   @bind="_password"
+                                   @bind:event="oninput"
+                                   disabled="@_busy" />
+                            <button type="button"
+                                    class="field-toggle"
+                                    aria-label="@(_showPassword ? "Hide password" : "Show password")"
+                                    aria-pressed="@(_showPassword ? "true" : "false")"
+                                    tabindex="-1"
+                                    disabled="@_busy"
+                                    @onclick="TogglePassword">
+                                <Icon Name="@(_showPassword ? "eyeSlash" : "eye")" />
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (_error is not null)
+                    {
+                        <div class="login-error" role="alert" aria-live="assertive">
+                            <Icon Name="warning" />
+                            <span>@_error</span>
+                        </div>
+                    }
+                    else if (_notice is not null)
+                    {
+                        <div class="login-error" role="status" aria-live="polite">
+                            <Icon Name="warning" />
+                            <span>@_notice</span>
+                        </div>
+                    }
+
+                    <button type="submit" class="login-btn" disabled="@_busy">
+                        @if (_busy)
+                        {
+                            <span class="login-spinner" aria-hidden="true"></span>
+                            <span>Signing in…</span>
+                        }
+                        else
+                        {
+                            <span>Sign in</span>
+                            <Icon Name="arrowRight" />
+                        }
+                    </button>
+                </form>
+
+                <div class="login-secure">
+                    <Icon Name="shield" />
+                    <span>Authorized personnel only. Access is monitored.</span>
+                </div>
+
+                <div class="login-help">
+                    Use the account an administrator set up for you here. Trouble signing in? Ask them to reset your password.
+                </div>
+                }
+
+                @* A signatory block: the label (the version at its far end), the names under it. Read in that
+                   order: label, names, version. *@
+                <div class="login-credit">
+                    <span class="credit-label"><span class="credit-tick" aria-hidden="true"></span>Developed by:</span>
+                    <span class="credit-names">
+                        <strong>Engr. Brian Jan Zamoras</strong>
+                        <span class="credit-pair">&amp; <strong>Engr. Michael Jay Zamoras</strong></span>
+                    </span>
+                    <VersionLabel />
+                </div>
+            </div>
+        </section>
+
+        <section class="login-right">
+            <div class="login-hero">
+                <img class="login-hero-seal" src="leyeco2-logo.png" alt="" width="104" height="104" />
+                <h3>Transaction Monitor</h3>
+                <p>Every transaction LEYECO II records, matched against its settlement, with what doesn't match set apart for review.</p>
+
+                @* What reconciling is, drawn in the register's own marks: two ledgers side by side, a gold tick in the
+                   margin for each pair that agrees, and one entry with nothing settled against it, its place left
+                   in pencil and flagged. The caption carries it for screen readers. *@
+                <figure class="ledger" aria-labelledby="ledger-caption">
+                    <div class="ledger-sheet" aria-hidden="true">
+                        <div class="ledger-head">Recorded</div>
+                        <div class="ledger-head is-margin"></div>
+                        <div class="ledger-head">Settled</div>
+
+                        @foreach (var row in LedgerRows)
+                        {
+                            <div class="ledger-cell"><span class="ledger-ink" style="width:@(row.Label)%"></span><span class="ledger-amount" style="width:@(row.Amount)%"></span></div>
+                            <div class="ledger-mark @(row.Matched ? "is-matched" : "is-flagged")" style="--mark-delay:@(row.Order * 140 + 520)ms">
+                                <Icon Name="@(row.Matched ? "check" : "flag")" />
+                            </div>
+                            @if (row.Matched)
+                            {
+                                <div class="ledger-cell"><span class="ledger-ink" style="width:@(row.Label)%"></span><span class="ledger-amount" style="width:@(row.Amount)%"></span></div>
+                            }
+                            else
+                            {
+                                <div class="ledger-cell is-pencil"></div>
+                            }
+                        }
+                    </div>
+                    <figcaption id="ledger-caption">Matched pairs are ticked; an entry with no settlement is flagged.</figcaption>
+                </figure>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private string _username = string.Empty;
+    private string _password = string.Empty;
+
+    // Step two, for an account whose password an administrator set: the password just typed stays
+    // in memory as the proof the change asks for, so it is not asked for twice.
+    private bool _settingPassword;
+    private bool _stepFocusPending;
+    private string _newPassword = string.Empty;
+    private string _confirmPassword = string.Empty;
+
+    private bool _showPassword;
+    private bool _busy;
+    private bool _checking = true;
+    private bool _focused;
+    private string? _error;
+    private string? _notice;
+
+    private ElementReference _usernameInput;
+    private ElementReference _newPasswordInput;
+
+    // The hero's two ledgers: the widths of each entry's description and amount strokes (percent of its cell),
+    // and whether a settlement agrees with it. Order sets when its tick lands.
+    private sealed record LedgerRow(int Order, int Label, int Amount, bool Matched);
+
+    private static readonly LedgerRow[] LedgerRows =
+    [
+        new(0, 52, 22, true),
+        new(1, 38, 30, true),
+        new(2, 60, 18, false),
+        new(3, 44, 26, true),
+        new(4, 30, 24, true),
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Someone already holding a valid session shouldn't see the form — send them to their home screen.
+        var state = await AuthState.GetAuthenticationStateAsync();
+        if (state.User.Identity?.IsAuthenticated == true)
+        {
+            Nav.NavigateTo(MonitorAccess.From(state.User).HomePath);
+            return;
+        }
+
+        // Why the shell sent the user here, when a session ended under them.
+        _notice = AuthState.ConsumeNotice();
+        _checking = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The username input only exists once the session check clears; focus it the first time it renders.
+        if (!_checking && !_focused)
+        {
+            _focused = true;
+            try { await _usernameInput.FocusAsync(); } catch { /* ref not ready — non-fatal */ }
+        }
+
+        // The form changed under the user: the keyboard goes to the first field of the step shown.
+        if (_stepFocusPending)
+        {
+            _stepFocusPending = false;
+            try
+            {
+                if (_settingPassword)
+                    await _newPasswordInput.FocusAsync();
+                else
+                    await _usernameInput.FocusAsync();
+            }
+            catch { /* ref not ready — non-fatal */ }
+        }
+    }
+
+    private void TogglePassword() => _showPassword = !_showPassword;
+
+    private async Task HandleLoginAsync()
+    {
+        if (_busy)
+            return;
+
+        _error = null;
+        _notice = null;
+
+        var username = _username.Trim();
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(_password))
+        {
+            _error = "Enter your username and password.";
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var user = await Auth.LoginAsync(username, _password);
+            AuthState.MarkSignedIn(user);
+            Nav.NavigateTo(MonitorAccess.From(user.Permissions).HomePath);
+        }
+        catch (ApiException ex) when (ex.StatusCode == AuthApiClient.PasswordChangeRequired)
+        {
+            // The password was right, but an administrator chose it: the account sets its own next.
+            _settingPassword = true;
+            _stepFocusPending = true;
+            _showPassword = false;
+            _newPassword = string.Empty;
+            _confirmPassword = string.Empty;
+        }
+        catch (ApiException ex)
+        {
+            // The server's words: refused credentials, a deactivated or locked account, one with
+            // no access yet, or too many attempts.
+            _error = ex.Message;
+        }
+        catch
+        {
+            _error = "Something went wrong while signing in. Please try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task HandleNewPasswordAsync()
+    {
+        if (_busy)
+            return;
+
+        _error = null;
+
+        var username = _username.Trim();
+        if (PasswordRules.Check(_newPassword, username) is { } problem)
+        {
+            _error = problem;
+            return;
+        }
+
+        if (_newPassword != _confirmPassword)
+        {
+            _error = "The two passwords don't match. Type the new password again.";
+            return;
+        }
+
+        if (_newPassword == _password)
+        {
+            _error = "Choose a password different from the one you were given.";
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var user = await Auth.ChangePasswordAsync(username, _password, _newPassword);
+            AuthState.MarkSignedIn(user);
+            Nav.NavigateTo(MonitorAccess.From(user.Permissions).HomePath);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch
+        {
+            _error = "Something went wrong while saving your password. Please try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void BackToSignIn()
+    {
+        _settingPassword = false;
+        _stepFocusPending = true;
+        _showPassword = false;
+        _password = string.Empty;
+        _newPassword = string.Empty;
+        _confirmPassword = string.Empty;
+        _error = null;
+    }
+}

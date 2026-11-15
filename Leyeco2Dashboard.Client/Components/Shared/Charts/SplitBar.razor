@@ -1,0 +1,44 @@
+@namespace Leyeco2Dashboard.Client.Components.Shared.Charts
+
+@* One whole split into its parts: a block each, as wide as its share, 2px apart, its share printed inside where
+   it fits. Its key is the register beside it, whose rows carry the same swatches in the same order; its
+   accessible name says every part. A whole of nothing draws an empty track. Compact (18px) sits on a register
+   row's 19px line, so a row of bars stays a 32px row. *@
+<div class="split @(Compact ? "is-compact" : null) @(Total <= 0 ? "is-empty" : null)" role="img" aria-label="@AccessibleName">
+    @foreach (var part in Parts.Where(part => part.Value > 0))
+    {
+        var share = part.Value / Total * 100m;
+        <span class="split-part"
+              style="flex-grow:@ChartMath.Css(share);background:@part.Color;color:@part.Ink"
+              title="@($"{part.Label}: {ValueFormat(part.Value)} ({Format(share)})")">
+            @if (share >= MinLabelShare)
+            {
+                <span class="split-label">@Format(share)</span>
+            }
+        </span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<SplitPart> Parts { get; set; } = [];
+
+    /// <summary>What the bar splits, for its accessible name: "Amount collected by channel".</summary>
+    [Parameter] public string Label { get; set; } = "Shares";
+
+    [Parameter] public Func<decimal, string> ValueFormat { get; set; } = value => value.ToString("N0");
+
+    /// <summary>A block narrower than this share prints no figure; the register beside it still does.</summary>
+    [Parameter] public decimal MinLabelShare { get; set; } = 9m;
+
+    /// <summary>18px instead of 24px, for a bar in a register's row.</summary>
+    [Parameter] public bool Compact { get; set; }
+
+    private decimal Total => Parts.Sum(part => part.Value);
+
+    private static string Format(decimal share)
+        => share > 0 && share < 0.1m ? "<0.1%" : share.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "%";
+
+    private string AccessibleName => Total <= 0
+        ? $"{Label}: nothing in this period"
+        : $"{Label}: " + string.Join(", ", Parts.Select(part => $"{part.Label} {Format(part.Value / Total * 100m)}"));
+}

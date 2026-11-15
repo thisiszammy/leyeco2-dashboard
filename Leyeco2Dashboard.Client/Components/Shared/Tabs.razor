@@ -1,0 +1,32 @@
+@namespace Leyeco2Dashboard.Client.Components.Shared
+@typeparam TValue
+
+<div class="tabs">
+    @foreach (var item in Items)
+    {
+        var isActive = EqualityComparer<TValue>.Default.Equals(item.Value, Selected);
+        <button type="button"
+                class="@(isActive ? "tab active" : "tab")"
+                @onclick="@(() => Select(item.Value))">
+            @item.Label
+            @if (item.Count is int n)
+            {
+                <span class="tab-count">@n.ToString("N0")</span>
+            }
+        </button>
+    }
+</div>
+
+@code {
+    public record TabItem(TValue Value, string Label, int? Count = null);
+
+    [Parameter, EditorRequired] public IReadOnlyList<TabItem> Items { get; set; } = System.Array.Empty<TabItem>();
+    [Parameter] public TValue? Selected { get; set; }
+    [Parameter] public EventCallback<TValue> SelectedChanged { get; set; }
+
+    private async Task Select(TValue value)
+    {
+        Selected = value;
+        await SelectedChanged.InvokeAsync(value);
+    }
+}

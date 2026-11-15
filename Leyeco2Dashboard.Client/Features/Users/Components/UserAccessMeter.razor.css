@@ -1,0 +1,21 @@
+/* UserAccessMeter — five ruled segments, 6px tall, so it sits inside a register row's 19px line. */
+.uam {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+}
+
+.uam-seg {
+    width: 14px;
+    height: 6px;
+    border-radius: 1px;
+    background: var(--slate-150);
+    overflow: hidden;
+}
+
+.uam-fill {
+    display: block;
+    height: 100%;
+    background: var(--brand-primary);
+}

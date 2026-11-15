@@ -1,0 +1,88 @@
+/* KpiCard — one cell of a page's .kpi-strip (app.css). The strip draws no inner rules:
+   each cell rules its own left and top edge just outside its box, and the strip clips
+   the ones that fall on its outer edge, so a strip that wraps to two rows stays ruled. */
+.stat {
+    min-width: 0;
+    padding: 7px 12px 8px;
+    background: var(--white);
+    box-shadow: -1px 0 0 var(--slate-150), 0 -1px 0 var(--slate-150);
+}
+
+.stat-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    min-height: 18px;
+}
+
+.stat-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 9.5px;
+    background: var(--slate-100);
+    color: var(--slate-600);
+}
+
+    .stat-icon.brand { background: var(--brand-light2); color: var(--brand-primary); }
+    .stat-icon.gold  { background: var(--gold-light2);  color: var(--gold-dark);     }
+    .stat-icon.red   { background: var(--red-light);  color: var(--red-primary); }
+    .stat-icon.blue  { background: var(--blue-100);   color: var(--blue-700);    }
+    .stat-icon.green { background: var(--green-100);  color: var(--green-600);   }
+    .stat-icon.pink  { background: var(--pink-200);   color: var(--pink-700);    }
+    .stat-icon.amber { background: var(--amber-100);  color: #B45309;            }
+
+.stat-label {
+    min-width: 0;
+    font-size: var(--fs-label);
+    font-weight: 500;
+    color: var(--slate-600);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stat-badge {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.stat-body {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    margin-top: 2px;
+}
+
+.stat-value {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    line-height: 26px;
+    font-weight: 600;
+    color: var(--slate-900);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.stat-sub {
+    min-width: 0;
+    font-size: var(--fs-label);
+    color: var(--slate-500);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Headline cell of a strip (net pay, a live selection). */
+.stat-accent {
+    background: var(--brand-light);
+}
+
+    .stat-accent .stat-label { color: var(--brand-darker); }
+    .stat-accent .stat-value { color: var(--brand-primary); }

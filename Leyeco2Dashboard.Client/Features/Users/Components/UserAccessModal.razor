@@ -1,0 +1,146 @@
+@namespace Leyeco2Dashboard.Client.Features.Users.Components
+
+@if (IsOpen && User is not null)
+{
+<SectionContent SectionName="overlay">
+    <div class="modal-overlay">
+        <div class="modal user-access-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-label="Change access"
+             @onclick:stopPropagation
+             @onkeydown="HandleKeyDownAsync">
+
+            <div class="modal-header">
+                <h3>Change Access</h3>
+                <button type="button" class="modal-close-btn" aria-label="Close dialog" disabled="@Busy" @ref="_closeButton" @onclick="RequestCloseAsync">
+                    <Icon Name="x" />
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <UserIdentityLine User="User" IsSelf="IsSelf" />
+
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="modal-error" role="alert">
+                        <Icon Name="warning" />
+                        <span>@ErrorMessage</span>
+                    </div>
+                }
+
+                <UserAccessEditor IdPrefix="user-access" Value="_grants" ValueChanged="OnGrantsChanged" IsSelf="IsSelf" Disabled="Busy" />
+            </div>
+
+            <div class="modal-footer">
+                <span class="user-access-tally @(_grants.Count == 0 ? "is-none" : null)" role="status">
+                    @if (_grants.Count == 0)
+                    {
+                        <Icon Name="warning" />
+                        <span>No access: the account won't be able to sign in.</span>
+                    }
+                    else if (UserAccess.IsAll(_grants))
+                    {
+                        <span>All access. Takes effect within a few minutes.</span>
+                    }
+                    else
+                    {
+                        <span>@UserAccess.Count(_grants) of @UserAccess.Offered permissions. Takes effect within a few minutes.</span>
+                    }
+                </span>
+                <button type="button" class="btn btn-secondary" disabled="@Busy" @onclick="RequestCloseAsync">Cancel</button>
+                <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="HandleSaveAsync">
+                    @if (Busy)
+                    {
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                        <span>Saving…</span>
+                    }
+                    else
+                    {
+                        <Icon Name="check" />
+                        <span>Save Access</span>
+                    }
+                </button>
+            </div>
+
+        </div>
+    </div>
+</SectionContent>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public UserDto? User { get; set; }
+
+    /// <summary>The signed-in account's own access: it keeps Manage users.</summary>
+    [Parameter] public bool IsSelf { get; set; }
+
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>The whole set the account is to hold. Not raised when nothing changed: the dialog just closes.</summary>
+    [Parameter] public EventCallback<IReadOnlyCollection<string>> OnSave { get; set; }
+
+    private IReadOnlyCollection<string> _grants = Array.Empty<string>();
+    private bool _wasOpen;
+    private Guid? _lastUserId;
+    private bool _focusPending;
+    private ElementReference _closeButton;
+
+    protected override void OnParametersSet()
+    {
+        var userId = User?.UserId;
+        if (IsOpen == _wasOpen && userId == _lastUserId)
+            return;
+
+        _wasOpen = IsOpen;
+        _lastUserId = userId;
+
+        if (IsOpen && User is not null)
+        {
+            // A list of its own: the editor resets its picks when the value it is handed changes identity.
+            _grants = User.Grants.ToList();
+            _focusPending = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Focus lands inside the dialog so Esc reaches it; on Close rather than the first switch,
+        // so a stray Space or Enter can't turn All access on.
+        if (_focusPending && IsOpen)
+        {
+            _focusPending = false;
+            try { await _closeButton.FocusAsync(); }
+            catch { /* element may not be rendered yet on a fast close — never crash over focus */ }
+        }
+    }
+
+    private void OnGrantsChanged(IReadOnlyCollection<string> grants) => _grants = grants;
+
+    private async Task RequestCloseAsync()
+    {
+        if (Busy) return;
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            await RequestCloseAsync();
+    }
+
+    private async Task HandleSaveAsync()
+    {
+        if (Busy || User is null) return;
+
+        if (_grants.ToHashSet().SetEquals(User.Grants))
+        {
+            await OnClose.InvokeAsync();
+            return;
+        }
+
+        await OnSave.InvokeAsync(_grants);
+    }
+}

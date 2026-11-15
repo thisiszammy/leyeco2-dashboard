@@ -1,0 +1,44 @@
+/* UserIdentityLine — avatar, name and username on two short lines. */
+.uil {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.uil-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.uil-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    line-height: 19px;
+    color: var(--slate-900);
+}
+
+.uil-you {
+    padding: 0 5px;
+    border: 1px solid var(--brand-rule);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    line-height: 15px;
+    color: var(--brand-primary);
+}
+
+.uil-handle {
+    font-size: var(--fs-label);
+    line-height: 16px;
+    color: var(--slate-500);
+}
+
+    .uil-handle .t-code {
+        color: var(--slate-700);
+        font-weight: 500;
+    }

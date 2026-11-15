@@ -1,0 +1,395 @@
+@page "/transaction-inspector"
+@attribute [Authorize(Policy = MonitorPolicies.InspectTransactions)]
+@namespace Leyeco2Dashboard.Client.Features.TransactionInspector.Pages
+@inherits DashboardPage<TransactionInspection>
+@inject TransactionInspectorApiClient InspectorApi
+@inject IJSRuntime JS
+@inject ToastService Toasts
+
+<PageTitle>Transaction Inspector — Leyeco II</PageTitle>
+
+@* Every bill paid online, followed through the three books it passes: the online payment facility (what was paid),
+   its posting queue (what was handed to the poster) and the collections ledger (what was posted). The passage sums
+   them; the register lists them, a bill a row, with a verdict on each; a row opens the bill in full; the summary and
+   the bills listed export as a PDF or an Excel workbook. *@
+<div class="ti-page @(Loading && Data is not null ? "is-reading" : null)" aria-busy="@(Loading ? "true" : "false")">
+    <div class="page-header-bar">
+        <div class="page-header" style="margin-bottom:0">
+            <h2>Transaction Inspector</h2>
+            <p class="subtitle">Each bill paid online, as the facility, its posting queue and the collections ledger hold it.</p>
+        </div>
+        <div class="page-header-actions">
+            <PeriodPicker Id="ti-period" From="From" To="To" OnChange="ChangePeriodAsync" OnRefresh="LoadAsync"
+                          ReadAt="Data?.GeneratedOn" Busy="Loading" />
+        </div>
+    </div>
+
+    @if (LoadError is not null && Data is null)
+    {
+        <div class="page-error ti-error" role="alert">
+            <div class="icon-circle"><Icon Name="warning" /></div>
+            <h4>Couldn't inspect the online payments</h4>
+            <p>@LoadError</p>
+            <button type="button" class="btn btn-secondary" @onclick="LoadAsync">
+                <Icon Name="replace" />
+                Try Again
+            </button>
+        </div>
+    }
+    else
+    {
+        @if (LoadError is not null && Data is not null)
+        {
+            <div class="ti-stale" role="status">
+                <Icon Name="warning" />
+                <span>Couldn't read the books again: @LoadError These are the ones read at @Figures.Time(Data.GeneratedOn).</span>
+            </div>
+        }
+
+        <InspectionPassage Summary="Data?.Summary" />
+
+        <Tabs TValue="string" Items="ViewTabs" Selected="_view" SelectedChanged="ChangeViewAsync" />
+
+        <div class="filter-bar ti-filters">
+            <label class="search-field ti-search">
+                <Icon Name="search" />
+                <input class="ob-input"
+                       type="search"
+                       placeholder="Account, name, payment or receipt…"
+                       aria-label="Search the bills by account number, consumer name, payment, bill number or receipt"
+                       value="@_search"
+                       @oninput="OnSearchInput" />
+            </label>
+
+            @if (Data is not null && Data.Providers.Count > 1)
+            {
+                <div class="toggle-group" role="group" aria-label="Provider">
+                    <button type="button" class="toggle-opt @(_provider.Length == 0 ? "active" : null)"
+                            aria-pressed="@(_provider.Length == 0 ? "true" : "false")" @onclick="() => ChangeProviderAsync(string.Empty)">
+                        All providers
+                    </button>
+                    @foreach (var provider in Data.Providers)
+                    {
+                        var key = provider.Key;
+                        var active = string.Equals(_provider, key, StringComparison.OrdinalIgnoreCase);
+                        <button type="button" class="toggle-opt @(active ? "active" : null)"
+                                aria-pressed="@(active ? "true" : "false")"
+                                title="@($"{Figures.Plural(provider.Bills, "bill", "bills")} in the period")"
+                                @onclick="() => ChangeProviderAsync(key)">
+                            @provider.Label
+                        </button>
+                    }
+                </div>
+            }
+
+            <div class="ti-export" role="group" aria-label="Export">
+                <button type="button" class="btn btn-secondary"
+                        disabled="@(Data is null || _exporting is not null)"
+                        aria-busy="@(_exporting == "pdf" ? "true" : null)"
+                        title="@ExportTitle("a PDF")"
+                        @onclick="() => ExportAsync(pdf: true)">
+                    @if (_exporting == "pdf")
+                    {
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                        <span>Preparing PDF…</span>
+                    }
+                    else
+                    {
+                        <Icon Name="filePdf" />
+                        <span>PDF</span>
+                    }
+                </button>
+                <button type="button" class="btn btn-secondary"
+                        disabled="@(Data is null || _exporting is not null)"
+                        aria-busy="@(_exporting == "xlsx" ? "true" : null)"
+                        title="@ExportTitle("an Excel workbook")"
+                        @onclick="() => ExportAsync(pdf: false)">
+                    @if (_exporting == "xlsx")
+                    {
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                        <span>Preparing Excel…</span>
+                    }
+                    else
+                    {
+                        <Icon Name="fileExcel" />
+                        <span>Excel</span>
+                    }
+                </button>
+            </div>
+        </div>
+
+        @if (Data is not null && Data.Page.TotalItems == 0 && !Loading)
+        {
+            <div class="empty-state ti-empty">
+                <div class="icon-circle"><Icon Name="@Empty.Icon" /></div>
+                <h4>@Empty.Title</h4>
+                <p>@Empty.Text</p>
+                @if (_searchApplied.Length > 0 || _provider.Length > 0)
+                {
+                    <button type="button" class="btn btn-secondary" @onclick="ClearFiltersAsync">
+                        <Icon Name="x" />
+                        Clear the filters
+                    </button>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="ti-register-shell @(Loading && Data is not null ? "is-refreshing" : null)">
+                <InspectionRegister @ref="_register"
+                                    Bills="Data?.Page.Items"
+                                    CurrentPage="@(Data?.Page.CurrentPage ?? 1)"
+                                    PageSize="@(Data?.Page.PageSize ?? PageSize)"
+                                    TotalPages="@(Data?.Page.TotalPages ?? 1)"
+                                    FooterText="@FooterText"
+                                    Caption="@Caption"
+                                    SingleDay="@(From == To)"
+                                    OnPage="ChangePageAsync"
+                                    OnOpen="Open" />
+            </div>
+        }
+    }
+
+    <InspectedBillModal Bill="_open"
+                        ShowPaymentBills="@(_open is not null && !string.Equals(_searchApplied, _open.TransactionId, StringComparison.OrdinalIgnoreCase))"
+                        OnClose="CloseAsync"
+                        OnShowPayment="ShowPaymentAsync" />
+</div>
+
+@code {
+    private const int PageSize = 20;
+    private const int SearchDebounceMs = 300;
+
+    private string _view = InspectionViews.All;
+    private string _provider = string.Empty;
+    private string _search = string.Empty;
+    private string _searchApplied = string.Empty;
+    private int _page = 1;
+    private InspectedBill? _open;
+    private string? _exporting;
+    private InspectionRegister? _register;
+    private CancellationTokenSource? _debounce;
+
+    private static readonly (string Key, string Label)[] Views =
+    [
+        (InspectionViews.All, "All bills"),
+        (InspectionViews.Attention, "Needs attention"),
+        (InspectionViews.Waiting, "Waiting to post"),
+        (InspectionViews.Tallied, "Tallied"),
+        (InspectionViews.Unpaid, "Not paid"),
+    ];
+
+    protected override string PagePath => "/transaction-inspector";
+
+    protected override async Task<TransactionInspection> ReadAsync(DateTime from, DateTime to, CancellationToken ct)
+    {
+        var inspection = await InspectorApi.GetAsync(from, to, _view, _provider, _searchApplied, _page, PageSize, ct);
+
+        // The API keeps a page inside the view; a re-read that shortened it answers its last page.
+        _page = inspection.Page.CurrentPage;
+
+        // A provider the period no longer has would narrow to nothing, with no toggle left to undo it.
+        if (_provider.Length > 0 && !inspection.Providers.Any(p => string.Equals(p.Key, _provider, StringComparison.OrdinalIgnoreCase)))
+        {
+            _provider = string.Empty;
+            return await InspectorApi.GetAsync(from, to, _view, _provider, _searchApplied, _page, PageSize, ct);
+        }
+
+        return inspection;
+    }
+
+    protected override bool IsLive(TransactionInspection data) => data.IncludesToday;
+
+    protected override void OnPeriodChanged()
+    {
+        _page = 1;
+        _open = null;
+    }
+
+    private IReadOnlyList<Tabs<string>.TabItem> ViewTabs
+        => Views.Select(view => new Tabs<string>.TabItem(view.Key, view.Label, Data?.Summary.Views.FirstOrDefault(v => v.Key == view.Key)?.Bills)).ToList();
+
+    private string ViewLabel => Views.First(view => view.Key == _view).Label;
+
+    private string Caption => Data is null
+        ? "Bills paid online, as each book holds them"
+        : $"{ViewLabel}, bills paid online {Figures.Period(Data.From, Data.To)}, as each book holds them";
+
+    private string FooterText
+    {
+        get
+        {
+            if (Data is null)
+                return "Reading the books…";
+
+            var page = Data.Page;
+            if (page.TotalItems == 0)
+                return "No results";
+
+            var start = (page.CurrentPage - 1) * page.PageSize + 1;
+            var end = start + page.Items.Count - 1;
+            return $"Showing {Figures.Count(start)}–{Figures.Count(end)} of {Figures.Plural(page.TotalItems, "bill", "bills")}";
+        }
+    }
+
+    private string ExportTitle(string kind)
+    {
+        if (Data is null)
+            return $"Download {kind} once the books are read";
+        return $"Download the summary and the {Figures.Plural(Data.Page.TotalItems, "bill", "bills")} of {ViewLabel} as {kind}";
+    }
+
+    private (string Icon, string Title, string Text) Empty
+    {
+        get
+        {
+            var period = Data is null ? "this period" : Figures.Period(Data.From, Data.To);
+            var all = Data?.Summary.Views.FirstOrDefault(v => v.Key == InspectionViews.All)?.Bills ?? 0;
+
+            if (_searchApplied.Length > 0 && all == 0)
+                return ("search", "No bill matches the search", $"No bill paid online on {period} has \"{_searchApplied}\" in its account number, consumer, payment, bill number or receipt.");
+            if (_provider.Length > 0 && all == 0)
+                return ("creditCard", "No bills through this provider", $"The provider carried no payment on {period}.");
+            if (all == 0)
+                return ("creditCard", "No online payments in this period", $"The online payment facility holds no payment begun on {period}. Pick another period above.");
+
+            return _view switch
+            {
+                InspectionViews.Attention => ("circleCheck", "Nothing needs attention",
+                    "Every bill paid online in this period is in the ledger under its payment's receipt for its full amount, or still waiting to post."),
+                InspectionViews.Waiting => ("circleCheck", "Nothing is waiting to post",
+                    "No paid bill is still in the posting queue without a posting in the ledger."),
+                InspectionViews.Tallied => ("hourglass", "No bill is tallied yet",
+                    "No bill paid online in this period is in the ledger under its payment's receipt for its full amount yet."),
+                InspectionViews.Unpaid => ("circleCheck", "Every payment begun went through",
+                    "No payment begun in this period ended pending, failed, cancelled or dropped."),
+                _ => ("creditCard", "No bills", "No bill is in this view."),
+            };
+        }
+    }
+
+    private async Task ChangeViewAsync(string view)
+    {
+        if (view == _view)
+            return;
+
+        _view = view;
+        _page = 1;
+        await LoadAsync();
+    }
+
+    private async Task ChangeProviderAsync(string provider)
+    {
+        if (string.Equals(provider, _provider, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _provider = provider;
+        _page = 1;
+        await LoadAsync();
+    }
+
+    private async Task ChangePageAsync(int page)
+    {
+        _page = page;
+        await LoadAsync();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+
+        _debounce?.Cancel();
+        _debounce?.Dispose();
+        var debounce = _debounce = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(SearchDebounceMs, debounce.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await ApplySearchAsync(_search.Trim());
+    }
+
+    private async Task ApplySearchAsync(string search)
+    {
+        if (search == _searchApplied)
+            return;
+
+        _searchApplied = search;
+        _page = 1;
+        await LoadAsync();
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        _search = string.Empty;
+        _searchApplied = string.Empty;
+        _provider = string.Empty;
+        _page = 1;
+        await LoadAsync();
+    }
+
+    private void Open(InspectedBill bill) => _open = bill;
+
+    private async Task CloseAsync()
+    {
+        var id = _open?.Id;
+        _open = null;
+        StateHasChanged();
+
+        if (id is int billId && _register is not null)
+            await _register.FocusAsync(billId);
+    }
+
+    /// <summary>Lists every bill of a payment, in every view: its TransactionId as the search.</summary>
+    private async Task ShowPaymentAsync(string transactionId)
+    {
+        _open = null;
+        _search = transactionId;
+        _view = InspectionViews.All;
+        await ApplySearchAsync(transactionId);
+    }
+
+    private async Task ExportAsync(bool pdf)
+    {
+        if (Data is null || _exporting is not null)
+            return;
+
+        _exporting = pdf ? "pdf" : "xlsx";
+        var (from, to, view, provider, search) = (Data.From, Data.To, _view, _provider, _searchApplied);
+        var fileName = TransactionInspectorApiClient.FileStem(from, to, ViewLabel, view == InspectionViews.All) + (pdf ? ".pdf" : ".xlsx");
+
+        try
+        {
+            var bytes = pdf
+                ? await InspectorApi.GetPdfAsync(from, to, view, provider, search)
+                : await InspectorApi.GetWorkbookAsync(from, to, view, provider, search);
+
+            await JS.InvokeVoidAsync("monitorFiles.saveAs", fileName, Convert.ToBase64String(bytes),
+                pdf ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            Toasts.Success("Download started", fileName);
+        }
+        catch (ApiException ex)
+        {
+            Toasts.Error(pdf ? "Couldn't prepare the PDF" : "Couldn't prepare the workbook", ex.Message);
+        }
+        catch (JSException)
+        {
+            Toasts.Error("Couldn't start the download", "Try again in a moment.");
+        }
+        finally
+        {
+            _exporting = null;
+        }
+    }
+
+    public override void Dispose()
+    {
+        _debounce?.Cancel();
+        _debounce?.Dispose();
+        base.Dispose();
+    }
+}

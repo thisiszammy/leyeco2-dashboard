@@ -1,0 +1,175 @@
+@namespace Leyeco2Dashboard.Client.Features.TransactionInspector.Components
+
+@* One bill in full: the verdict in a sentence, then each book's record of it on a slip of its own, side by side in the
+   order the payment travels, the labels in a margin left of the gold rule. A book that holds nothing for the bill
+   leaves its slip in pencil, saying so. Read-only: closing is all it does, besides listing the payment's bills. *@
+@if (Bill is not null)
+{
+    <SectionContent SectionName="overlay">
+        @* House rule: no @onclick on the overlay. Esc and Close dismiss. *@
+        <div class="modal-overlay">
+            <div class="modal ti-bill-modal"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="ti-bill-title"
+                 aria-describedby="ti-bill-verdict"
+                 @onkeydown="HandleKeyDownAsync">
+
+                <div class="modal-header">
+                    <div class="ti-bill-heading">
+                        <h3 id="ti-bill-title" tabindex="-1" @ref="_title">
+                            <span class="t-code">@Bill.AccountNumber</span>, @InspectionTones.BillPeriod(Bill.ServicePeriodEnd) bill
+                        </h3>
+                        <span class="ti-bill-who">
+                            @(Bill.ConsumerName ?? "No consumer on file under this account")
+                            @if (Bill.IsDisconnected)
+                            {
+                                <span class="card-badge badge-gray">Disconnected</span>
+                            }
+                        </span>
+                    </div>
+                    <button type="button" class="modal-close-btn" aria-label="Close" title="Close (Esc)" @onclick="CloseAsync">
+                        <Icon Name="x" />
+                    </button>
+                </div>
+
+                <div class="modal-body ti-bill-body">
+                    <div class="ti-bill-verdict @InspectionTones.Verdict(Bill.Verdict)" id="ti-bill-verdict">
+                        <span class="ti-bill-verdict-label">@Bill.VerdictLabel</span>
+                        <p>@InspectionTones.Statement(Bill)</p>
+                    </div>
+
+                    <div class="ti-slips">
+                        <section class="ti-slip" aria-labelledby="ti-slip-facility">
+                            <h4 id="ti-slip-facility"><span>Online facility</span><span class="ti-state @InspectionTones.Facility(Bill.Facility.Status)"><span class="ti-state-dot"></span>@Bill.Facility.StatusLabel</span></h4>
+                            <dl>
+                                <dt>Payment</dt><dd class="t-code">@Bill.TransactionId</dd>
+                                <dt>Provider</dt><dd>@Bill.ProviderLabel</dd>
+                                <dt>Provider ref.</dt><dd class="t-code">@(Bill.ProviderReference ?? "—")</dd>
+                                <dt>Bill no.</dt><dd class="t-code">@(Bill.BillNumber.Length > 0 ? Bill.BillNumber : "—")</dd>
+                                <dt>Begun</dt><dd>@InspectionTones.Stamp(Bill.CreatedOn)</dd>
+                                <dt>Resolved</dt><dd>@InspectionTones.Stamp(Bill.ResolvedOn)</dd>
+                                <dt>Amount</dt><dd class="num">@Figures.Peso(Bill.Facility.Amount)</dd>
+                                <dt>Surcharge</dt><dd class="num">@Figures.Peso(Bill.Facility.Surcharge)</dd>
+                                <dt class="is-total">Total</dt><dd class="num is-total">@Figures.Peso(Bill.Facility.Total)</dd>
+                                <dt>Remarks</dt><dd>@(Bill.Facility.Remarks ?? "—")</dd>
+                            </dl>
+                        </section>
+
+                        @if (Bill.Queue is not null)
+                        {
+                            <section class="ti-slip" aria-labelledby="ti-slip-queue">
+                                <h4 id="ti-slip-queue"><span>Posting queue</span><span class="ti-state @InspectionTones.Queue(Bill.Queue.Status)"><span class="ti-state-dot"></span>@Bill.Queue.StatusLabel</span></h4>
+                                <dl>
+                                    <dt>Status</dt><dd>@Bill.Queue.StatusLabel <span class="ti-quiet">(@Bill.Queue.StatusCode)</span></dd>
+                                    <dt>Receipt</dt><dd class="t-code">@(Bill.Queue.OrNumber ?? "—")</dd>
+                                    <dt>Receipt date</dt><dd>@(Bill.Queue.OrDate ?? "—")</dd>
+                                    <dt>Post as</dt><dd>@(Bill.Queue.PostAs ?? "—")</dd>
+                                    <dt>Queued</dt><dd>@InspectionTones.Stamp(Bill.Queue.QueuedOn)</dd>
+                                    <dt>Amount</dt><dd class="num">@Figures.Peso(Bill.Queue.Amount)</dd>
+                                    <dt>Surcharge</dt><dd class="num">@Figures.Peso(Bill.Queue.Surcharge)</dd>
+                                    <dt class="is-total">Total</dt><dd class="num is-total">@Figures.Peso(Bill.Queue.Total)</dd>
+                                    <dt>Remarks</dt><dd>@(Bill.Queue.Remarks ?? "—")</dd>
+                                </dl>
+                                @if (Bill.Queue.Entries > 1)
+                                {
+                                    <p class="ti-slip-note">Queued @Bill.Queue.Entries times; this is the latest.</p>
+                                }
+                            </section>
+                        }
+                        else
+                        {
+                            <section class="ti-slip is-pencil" aria-labelledby="ti-slip-queue">
+                                <h4 id="ti-slip-queue"><span>Posting queue</span></h4>
+                                <p>The posting queue holds no row for this bill: the facility never handed it to the poster.</p>
+                            </section>
+                        }
+
+                        @if (Bill.Ledger is not null)
+                        {
+                            <section class="ti-slip" aria-labelledby="ti-slip-ledger">
+                                <h4 id="ti-slip-ledger"><span>Collections ledger</span><span class="ti-state @InspectionTones.Ledger(Bill.Ledger.Status)"><span class="ti-state-dot"></span>@Bill.Ledger.StatusLabel</span></h4>
+                                <dl>
+                                    <dt>Receipt</dt><dd class="t-code">@(Bill.Ledger.OrNumber ?? "—")</dd>
+                                    <dt>Receipt date</dt><dd>@InspectionTones.Day(Bill.Ledger.OrDate)</dd>
+                                    <dt>Date paid</dt><dd>@InspectionTones.Day(Bill.Ledger.DatePaid)</dd>
+                                    <dt>Posted</dt><dd>@InspectionTones.Stamp(Bill.Ledger.PostedOn)</dd>
+                                    <dt>Channel</dt><dd>@Bill.Ledger.Channel <span class="ti-quiet">(@(Bill.Ledger.Username ?? "no account"))</span></dd>
+                                    <dt>Posted by</dt><dd>@(Bill.Ledger.PostedBy ?? "—")@(Bill.Ledger.CollectorId is { } collector ? $", collector {collector}" : string.Empty)</dd>
+                                    <dt>Bill no.</dt><dd class="t-code">@Bill.Ledger.BillNumber</dd>
+                                    <dt>Amount paid</dt><dd class="num">@Figures.Peso(Bill.Ledger.Amount)</dd>
+                                    <dt>Surcharge</dt><dd class="num">@Figures.Peso(Bill.Ledger.Surcharge)</dd>
+                                    <dt class="is-total">Total</dt><dd class="num is-total @(Bill.Verdict == InspectionTones.AmountDiffers ? "is-off" : null)">@Figures.Peso(Bill.Ledger.Total)</dd>
+                                    <dt>Remarks</dt><dd>@(Bill.Ledger.Remarks ?? "—")</dd>
+                                </dl>
+                            </section>
+                        }
+                        else
+                        {
+                            <section class="ti-slip is-pencil" aria-labelledby="ti-slip-ledger">
+                                <h4 id="ti-slip-ledger"><span>Collections ledger</span></h4>
+                                <p>The ledger holds no row for account <span class="t-code">@Bill.AccountNumber</span>'s @InspectionTones.BillPeriod(Bill.ServicePeriodEnd) bill, from this payment or any other.</p>
+                            </section>
+                        }
+                    </div>
+                </div>
+
+                <div class="modal-footer ti-bill-footer">
+                    @if (ShowPaymentBills)
+                    {
+                        <button type="button" class="btn btn-ghost" @onclick="ShowPaymentAsync"
+                                title="Search the register for every bill of payment @Bill.TransactionId">
+                            <Icon Name="search" />
+                            All bills of this payment
+                        </button>
+                    }
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAsync">Close</button>
+                </div>
+            </div>
+        </div>
+    </SectionContent>
+}
+
+@code {
+    private ElementReference _title;
+    private int? _focusedFor;
+
+    /// <summary>The bill shown; null keeps the dialog closed.</summary>
+    [Parameter] public InspectedBill? Bill { get; set; }
+
+    /// <summary>Offer to list the payment's bills: not when the register already lists exactly those.</summary>
+    [Parameter] public bool ShowPaymentBills { get; set; } = true;
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Lists every bill of the payment (its TransactionId as the search).</summary>
+    [Parameter] public EventCallback<string> OnShowPayment { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Bill is null)
+        {
+            _focusedFor = null;
+            return;
+        }
+
+        // The title takes the keyboard as the dialog opens, so a screen reader starts on what it is.
+        if (_focusedFor == Bill.Id)
+            return;
+
+        _focusedFor = Bill.Id;
+        try { await _title.FocusAsync(); }
+        catch (InvalidOperationException) { }
+        catch (Microsoft.JSInterop.JSException) { }
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            await CloseAsync();
+    }
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+
+    private Task ShowPaymentAsync() => Bill is null ? Task.CompletedTask : OnShowPayment.InvokeAsync(Bill.TransactionId);
+}

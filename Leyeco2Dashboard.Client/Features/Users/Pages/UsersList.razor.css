@@ -1,0 +1,26 @@
+/* UsersList — the toolbar, key figures, tabs and empty states come from app.css
+   (.page-header-bar, .search-field, .kpi-strip, .tabs, .empty-state); this file keeps the
+   stale-while-loading table shell. */
+
+/* Room for "Search by name, username or email…" beside Add User. */
+.users-page .search-field {
+    width: 280px;
+    max-width: 100%;
+}
+
+/* Table shell dims (but keeps) the previous page while a newer search, tab or page
+   request is in flight — stale-while-loading instead of a layout flash. */
+.users-table-shell {
+    transition: opacity 0.18s var(--ease-out-quart);
+}
+
+    .users-table-shell.is-refreshing {
+        opacity: 0.55;
+        pointer-events: none;
+    }
+
+@media (prefers-reduced-motion: reduce) {
+    .users-table-shell {
+        transition: none;
+    }
+}

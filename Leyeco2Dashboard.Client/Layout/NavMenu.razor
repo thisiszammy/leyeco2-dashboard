@@ -1,0 +1,168 @@
+@implements IDisposable
+@inject NavigationManager Nav
+
+<div class="sidebar-logo @RailClass">
+    <div class="sidebar-logo-icon">
+        <img src="leyeco2-logo.png" alt="Leyeco II" />
+    </div>
+    <div class="sidebar-logo-text">
+        <h1>Leyeco II</h1>
+        <span>Transaction Monitor</span>
+    </div>
+</div>
+
+<nav class="sidebar-nav @RailClass" aria-label="Main">
+    @* Dashboard stands alone above the groups — it's the overview home, not a
+       member of any one domain. *@
+    @if (ShowHome)
+    {
+        <NavLink class="sidebar-nav-link" href="@Home.Href" Match="@Home.MatchMode" ActiveClass="active" title="@RailTitle(Home)">
+            <Icon Name="@Home.Icon" />
+            <span class="sidebar-nav-label">@Home.Label</span>
+        </NavLink>
+    }
+
+    @foreach (var group in VisibleGroups)
+    {
+        var isExpanded = _expanded.Contains(group.Key);
+        var isActiveGroup = group.Key == ActiveGroupKey;
+        var groupCss = "nav-group"
+            + (isExpanded ? " expanded" : string.Empty)
+            + (isActiveGroup ? " has-active" : string.Empty);
+        var regionId = $"navgroup-{group.Key}";
+
+        <div class="@groupCss">
+            <button type="button"
+                    class="nav-group-header"
+                    aria-expanded="@(isExpanded ? "true" : "false")"
+                    aria-controls="@regionId"
+                    @onclick="() => ToggleGroup(group.Key)">
+                <span class="nav-group-label">@group.Label</span>
+                <i class="nav-group-chevron @IconLibrary.Get("chevronRight")" aria-hidden="true"></i>
+            </button>
+
+            <div class="nav-group-items" id="@regionId" role="group" aria-label="@group.Label">
+                <div class="nav-group-items-inner">
+                    @foreach (var item in group.Items)
+                    {
+                        <NavLink class="sidebar-nav-link" href="@item.Href" Match="@item.MatchMode" ActiveClass="active" title="@RailTitle(item)">
+                            <Icon Name="@item.Icon" />
+                            <span class="sidebar-nav-label">@item.Label</span>
+                        </NavLink>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</nav>
+
+<div class="sidebar-foot @RailClass">
+    <SidebarAccount Collapsed="Collapsed" />
+
+    <button type="button"
+            class="sidebar-toggle"
+            aria-label="@(Collapsed ? "Expand the sidebar" : "Collapse the sidebar to icons")"
+            title="@(Collapsed ? "Expand the sidebar" : "Collapse the sidebar to icons")"
+            @onclick="OnToggleCollapsed">
+        <Icon Name="@(Collapsed ? "sidebarExpand" : "sidebarCollapse")" />
+    </button>
+</div>
+
+@* The first cell of the window's status line: as tall as AppFooter and ruled like it, so the version opens the
+   line that carries the copyright and the build credit. *@
+<div class="sidebar-version @RailClass">
+    <VersionLabel Compact="Collapsed" />
+</div>
+
+@code {
+    private record NavItemData(string Label, string Icon, string Href, NavLinkMatch MatchMode, string? Policy = null);
+    private record NavGroupData(string Key, string Label, NavItemData[] Items);
+
+    /// <summary>Rail mode: icons only, every group open, labels kept for screen readers and tooltips.</summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    [CascadingParameter] public MonitorAccess Access { get; set; } = MonitorAccess.None;
+
+    [Parameter] public EventCallback OnToggleCollapsed { get; set; }
+
+    // Overview home — rendered standalone above the grouped destinations. It takes the dashboard's grant, so an
+    // account without it (an administrator who only keeps the accounts) is not offered a screen it cannot open.
+    private static readonly NavItemData Home =
+        new("Dashboard", "dashboard", "/", NavLinkMatch.All, MonitorPolicies.ViewDashboard);
+
+    // Domain-oriented groups, in the order of MonitorPolicies.Groups (the Users screen's access sheet reads the
+    // same order). Each destination names the policy of its page's [Authorize], so it shows exactly when the page
+    // would open. The transaction registers join Monitoring as they are built. The overall dashboard is Monitoring's
+    // too (its grant is that group's), drawn as Home above the groups.
+    private static readonly NavGroupData[] Groups =
+    {
+        new("monitoring", "Monitoring", new NavItemData[]
+        {
+            new("Online Payments", "creditCard", "/online-payments", NavLinkMatch.Prefix, MonitorPolicies.ViewOnlinePayments),
+            new("Transaction Inspector", "reconcile", "/transaction-inspector", NavLinkMatch.Prefix, MonitorPolicies.InspectTransactions),
+        }),
+        new("administration", "Administration", new NavItemData[]
+        {
+            new("Users", "userGear", "/administration/users", NavLinkMatch.Prefix, MonitorPolicies.ManageUsers),
+        }),
+    };
+
+    private bool ShowHome => Home.Policy is null || Access.Can(Home.Policy);
+
+    // The groups as the account's grants open them; a group with no destination left goes too.
+    private IEnumerable<NavGroupData> VisibleGroups => Groups
+        .Select(group => group with { Items = group.Items.Where(item => item.Policy is null || Access.Can(item.Policy)).ToArray() })
+        .Where(group => group.Items.Length > 0);
+
+    // Group keys the user has opened. While the sidebar holds a handful of destinations every group starts open,
+    // so nothing is a click away for nothing; the active group is added on each navigation all the same, and the
+    // set persists across in-app navigation because the layout (and this component) outlives page changes.
+    private readonly HashSet<string> _expanded = Groups.Select(group => group.Key).ToHashSet();
+
+    private string? RailClass => Collapsed ? "is-rail" : null;
+
+    // The rail hides the labels, so the tooltip carries them; in full mode the label is on screen.
+    private string? RailTitle(NavItemData item) => Collapsed ? item.Label : null;
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        ExpandActiveGroup();
+    }
+
+    // Auto-open the group that owns the destination so the active item is always
+    // visible after navigating; never auto-collapses the groups the user opened.
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        ExpandActiveGroup();
+        StateHasChanged();
+    }
+
+    private void ToggleGroup(string key)
+    {
+        if (!_expanded.Remove(key))
+            _expanded.Add(key);
+    }
+
+    private void ExpandActiveGroup()
+    {
+        if (ActiveGroupKey is string key)
+            _expanded.Add(key);
+    }
+
+    // Current path normalised to the leading-slash form used by the Href values
+    // (root -> "/", "administration/users" -> "/administration/users").
+    private string CurrentPath =>
+        "/" + Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Trim('/');
+
+    private bool IsItemActive(NavItemData item) =>
+        item.MatchMode == NavLinkMatch.All
+            ? string.Equals(CurrentPath, item.Href, StringComparison.OrdinalIgnoreCase)
+            : CurrentPath.Equals(item.Href, StringComparison.OrdinalIgnoreCase)
+              || CurrentPath.StartsWith(item.Href + "/", StringComparison.OrdinalIgnoreCase);
+
+    private string? ActiveGroupKey =>
+        Groups.FirstOrDefault(g => g.Items.Any(IsItemActive))?.Key;
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}

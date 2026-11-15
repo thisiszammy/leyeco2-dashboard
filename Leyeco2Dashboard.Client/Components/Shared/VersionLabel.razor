@@ -1,0 +1,19 @@
+@namespace Leyeco2Dashboard.Client.Components.Shared
+@using Leyeco2Dashboard.App
+
+@* The Transaction Monitor version, drawn "ver0.1.0": MonitorVersion.Current, the const Leyeco2Dashboard.App owns and this console
+   compiles too. Size and line height come from the text around it; screen readers hear "Version 1.0.4". *@
+<span class="version @(Compact ? "is-compact" : null)">
+    <span aria-hidden="true" title="@(Compact ? Label : null)"><span class="version-prefix">ver</span><span class="version-number t-code">@MonitorVersion.Current</span></span>
+    <span class="sr-only">@SpokenLabel</span>
+</span>
+
+@code {
+    /// <summary>The number alone, for the sidebar's rail; hovering it shows the full label.</summary>
+    [Parameter] public bool Compact { get; set; }
+
+    private const string Label = "ver" + MonitorVersion.Current;
+
+    // One text node, so assistive technology reads it as one phrase.
+    private const string SpokenLabel = "Version " + MonitorVersion.Current;
+}

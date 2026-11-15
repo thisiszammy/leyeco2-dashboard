@@ -1,0 +1,10 @@
+/* UserStatusModal — the shared confirm block; giving a sign-in back is not a warning, so its mark
+   is navy instead of the block's red. */
+.modal-confirm .icon-wrap.is-neutral {
+    background: var(--brand-light);
+    color: var(--brand-primary);
+}
+
+.modal-confirm p {
+    max-width: 400px;
+}

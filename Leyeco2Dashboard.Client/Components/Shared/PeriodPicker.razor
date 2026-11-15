@@ -1,0 +1,119 @@
+@namespace Leyeco2Dashboard.Client.Components.Shared
+@using System.Globalization
+@using Leyeco2Dashboard.Client.Infrastructure.Formatting
+
+@* A dashboard's period, in its toolbar: the periods asked for most, one click each, then any two dates. A pick is
+   raised at once (OnChange); the page puts it in its address, so Back returns to the period before. The last
+   cell says when the figures were read and reads them again. *@
+<div class="period">
+    <div class="toggle-group" role="group" aria-label="Period">
+        @foreach (var preset in Presets)
+        {
+            var (from, to) = preset.Range(Today);
+            var active = from == From && to == To;
+            <button type="button"
+                    class="toggle-opt @(active ? "active" : null)"
+                    aria-pressed="@(active ? "true" : "false")"
+                    @onclick="() => Pick(from, to)">
+                @preset.Label
+            </button>
+        }
+    </div>
+
+    <div class="period-dates">
+        <label class="sr-only" for="@($"{Id}-from")">From</label>
+        <input id="@($"{Id}-from")"
+               class="ob-input"
+               type="date"
+               value="@Iso(From)"
+               max="@Iso(To)"
+               @onchange="ChangeFrom" />
+        <span class="period-dash" aria-hidden="true">–</span>
+        <label class="sr-only" for="@($"{Id}-to")">To</label>
+        <input id="@($"{Id}-to")"
+               class="ob-input"
+               type="date"
+               value="@Iso(To)"
+               min="@Iso(From)"
+               @onchange="ChangeTo" />
+    </div>
+
+    <div class="period-read">
+        @if (ReadAt is DateTime readAt)
+        {
+            <span class="period-asof" title="@($"Read from the database at {Figures.Time(readAt)} on {Figures.DayLong(readAt)}")">As of @Figures.Time(readAt)</span>
+        }
+        <button type="button"
+                class="btn btn-secondary btn-icon"
+                aria-label="Read the figures again"
+                title="Read the figures again"
+                disabled="@Busy"
+                @onclick="OnRefresh">
+            @if (Busy)
+            {
+                <span class="btn-spinner" aria-hidden="true"></span>
+            }
+            else
+            {
+                <Icon Name="refresh" />
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    private sealed record Preset(string Label, Func<DateTime, (DateTime From, DateTime To)> Range);
+
+    private static readonly Preset[] Presets =
+    [
+        new("Today", today => (today, today)),
+        new("Yesterday", today => (today.AddDays(-1), today.AddDays(-1))),
+        new("7 days", today => (today.AddDays(-6), today)),
+        new("This month", today => (new DateTime(today.Year, today.Month, 1), today)),
+        new("Last month", today =>
+        {
+            var first = new DateTime(today.Year, today.Month, 1).AddMonths(-1);
+            return (first, first.AddMonths(1).AddDays(-1));
+        }),
+    ];
+
+    [Parameter, EditorRequired] public DateTime From { get; set; }
+    [Parameter, EditorRequired] public DateTime To { get; set; }
+
+    [Parameter] public EventCallback<(DateTime From, DateTime To)> OnChange { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+
+    /// <summary>When the figures on screen were read (the API's clock).</summary>
+    [Parameter] public DateTime? ReadAt { get; set; }
+
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>Prefix for the date fields' ids, unique on the page.</summary>
+    [Parameter] public string Id { get; set; } = "period";
+
+    private static DateTime Today => DateTime.Today;
+
+    private static string Iso(DateTime date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private Task Pick(DateTime from, DateTime to) => OnChange.InvokeAsync((from.Date, to.Date));
+
+    // A start after the end moves the end with it, and the other way round, so the two fields always make a period.
+    private Task ChangeFrom(ChangeEventArgs e)
+    {
+        if (!TryParse(e.Value, out var from))
+            return Task.CompletedTask;
+
+        return Pick(from, from > To ? from : To);
+    }
+
+    private Task ChangeTo(ChangeEventArgs e)
+    {
+        if (!TryParse(e.Value, out var to))
+            return Task.CompletedTask;
+
+        return Pick(to < From ? to : From, to);
+    }
+
+    private static bool TryParse(object? value, out DateTime date)
+        => DateTime.TryParseExact(value?.ToString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+}

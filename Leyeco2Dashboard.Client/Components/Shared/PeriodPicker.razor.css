@@ -1,0 +1,51 @@
+/* PeriodPicker: one toolbar row of 30px controls (the toggle group, two date fields, the refresh button),
+   wrapping as a whole group on a narrow window. */
+.period {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.period-dates {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+    .period-dates .ob-input {
+        width: 132px;
+        font-variant-numeric: tabular-nums;
+    }
+
+.period-dash {
+    color: var(--slate-400);
+}
+
+.period-read {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.period-asof {
+    font-size: var(--fs-label);
+    color: var(--slate-500);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+    .period {
+        justify-content: flex-start;
+    }
+
+    .period .toggle-group {
+        flex-wrap: wrap;
+    }
+
+    .period-dates .ob-input {
+        width: 128px;
+    }
+}

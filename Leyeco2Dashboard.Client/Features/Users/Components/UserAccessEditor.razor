@@ -1,0 +1,142 @@
+@namespace Leyeco2Dashboard.Client.Features.Users.Components
+
+@* What an account may open: All access, or permissions picked part by part of the Transaction Monitor. Each
+   part names itself in the margin, left of the rule. *@
+<div class="uae">
+    <div class="uae-all @(_all ? "is-on" : null)">
+        <button type="button"
+                class="ob-toggle uae-switch"
+                role="switch"
+                aria-checked="@(_all ? "true" : "false")"
+                aria-labelledby="@($"{IdPrefix}-all")"
+                aria-describedby="@($"{IdPrefix}-all-help")"
+                style="@(_all ? "background:var(--brand-primary)" : "background:var(--slate-200)")"
+                disabled="@Disabled"
+                @onclick="ToggleAllAsync">
+            <span class="ob-toggle-knob" style="@(_all ? "left:16px" : "left:2px")"></span>
+        </button>
+        <div class="uae-all-text">
+            <span class="uae-all-label" id="@($"{IdPrefix}-all")">@MonitorPolicies.Label(MonitorPolicies.AllAccess)</span>
+            <span class="uae-all-help" id="@($"{IdPrefix}-all-help")">@MonitorPolicies.Describe(MonitorPolicies.AllAccess)</span>
+        </div>
+    </div>
+
+    @foreach (var (group, groupIndex) in MonitorPolicies.Groups.Select((g, i) => (g, i)))
+    {
+        var held = _all ? group.Grants.Count : group.Grants.Count(_picked.Contains);
+        var groupId = $"{IdPrefix}-group-{groupIndex}";
+        <section class="uae-group @(_all ? "is-covered" : null)" aria-labelledby="@groupId">
+            <div class="uae-margin">
+                <h4 class="uae-group-name" id="@groupId" title="@group.Summary">@group.Name</h4>
+                <span class="uae-group-count">@held of @group.Grants.Count</span>
+                @if (!_all && !Disabled)
+                {
+                    <button type="button" class="uae-group-toggle" @onclick="() => ToggleGroupAsync(group)">
+                        @(held == group.Grants.Count ? "Clear" : "Select all")<span class="sr-only"> in @group.Name</span>
+                    </button>
+                }
+            </div>
+            <div class="uae-grants">
+                @foreach (var grant in group.Grants)
+                {
+                    var isLocked = IsLocked(grant);
+                    var isOn = _all || _picked.Contains(grant);
+                    <label class="uae-grant @(isOn ? "is-on" : null)" title="@(isLocked && !_all ? OwnAccessNote : null)">
+                        <input type="checkbox"
+                               class="uae-check"
+                               checked="@isOn"
+                               disabled="@(Disabled || _all || isLocked)"
+                               @onchange="() => ToggleAsync(grant)" />
+                        <span class="uae-grant-text">
+                            <span class="uae-grant-label">@MonitorPolicies.Label(grant)</span>
+                            <span class="uae-grant-help">@MonitorPolicies.Describe(grant)</span>
+                        </span>
+                    </label>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private const string OwnAccessNote = "You can't remove your own access to the Users screen. Another administrator can.";
+
+    /// <summary>The grants held, by name: All access alone, or the permissions picked.</summary>
+    [Parameter, EditorRequired] public IReadOnlyCollection<string> Value { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback<IReadOnlyCollection<string>> ValueChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>The signed-in account's own access: it keeps Manage users whatever else changes, as the API insists.</summary>
+    [Parameter] public bool IsSelf { get; set; }
+
+    /// <summary>Makes the ids of two editors on one page distinct.</summary>
+    [Parameter] public string IdPrefix { get; set; } = "uae";
+
+    // The permissions picked one by one, kept while All access is on so turning it off gives them back.
+    private readonly HashSet<string> _picked = new();
+    private bool _all;
+    private IReadOnlyCollection<string>? _seen;
+
+    protected override void OnParametersSet()
+    {
+        // Only a value from outside (the dialog opening on an account) resets the picks; the
+        // editor's own changes come back through the same parameter.
+        if (ReferenceEquals(Value, _seen))
+            return;
+
+        _seen = Value;
+        _all = UserAccess.IsAll(Value);
+        _picked.Clear();
+        foreach (var grant in Value.Where(grant => grant != MonitorPolicies.AllAccess))
+            _picked.Add(grant);
+
+        if (IsSelf)
+            _picked.Add(MonitorPolicies.ManageUsers);
+    }
+
+    private bool IsLocked(string grant) => IsSelf && grant == MonitorPolicies.ManageUsers;
+
+    private Task ToggleAllAsync()
+    {
+        _all = !_all;
+        return RaiseAsync();
+    }
+
+    private Task ToggleAsync(string grant)
+    {
+        if (_all || IsLocked(grant))
+            return Task.CompletedTask;
+
+        if (!_picked.Remove(grant))
+            _picked.Add(grant);
+
+        return RaiseAsync();
+    }
+
+    private Task ToggleGroupAsync(MonitorPolicies.GrantGroup group)
+    {
+        if (group.Grants.All(_picked.Contains))
+        {
+            foreach (var grant in group.Grants.Where(grant => !IsLocked(grant)))
+                _picked.Remove(grant);
+        }
+        else
+        {
+            foreach (var grant in group.Grants)
+                _picked.Add(grant);
+        }
+
+        return RaiseAsync();
+    }
+
+    private Task RaiseAsync()
+    {
+        IReadOnlyCollection<string> value = _all
+            ? new[] { MonitorPolicies.AllAccess }
+            : MonitorPolicies.Groups.SelectMany(group => group.Grants).Where(_picked.Contains).ToList();
+
+        _seen = value;
+        return ValueChanged.InvokeAsync(value);
+    }
+}

@@ -1,0 +1,52 @@
+@using System.Reflection
+
+@* What a screen shows an account whose session lacks its grant: App's AuthorizeRouteView renders this in the shell
+   instead of the page, naming the permission to ask for. The sidebar hides such screens, so it is reached by a link, a
+   bookmark or a grant revoked mid-session. *@
+
+<PageTitle>No access — Leyeco II Transaction Monitor</PageTitle>
+
+<div class="page-header-bar">
+    <div class="page-header" style="margin-bottom:0">
+        <h2>No access</h2>
+        <p class="subtitle">Each screen of the Transaction Monitor opens to the accounts that hold its permission.</p>
+    </div>
+</div>
+
+<div class="empty-state">
+    <div class="icon-circle"><Icon Name="lock" /></div>
+    <h4>Your account can't open this screen</h4>
+    <p>It needs @Needed. Ask an administrator to give it on the Users screen, then sign in again.</p>
+    @if (Access.HomePath != CurrentPath)
+    {
+        <a class="btn btn-secondary" href="@Access.HomePath">
+            <Icon Name="@(Access.HomePath == "/" ? "dashboard" : "userGear")" />
+            @(Access.HomePath == "/" ? "Go to the Dashboard" : "Go to Users")
+        </a>
+    }
+</div>
+
+@code {
+    /// <summary>The page the account was refused; its <c>[Authorize]</c> attributes name the grant it takes.</summary>
+    [Parameter, EditorRequired] public Type PageType { get; set; } = default!;
+
+    [CascadingParameter] public MonitorAccess Access { get; set; } = MonitorAccess.None;
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private string CurrentPath => "/" + Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Trim('/');
+
+    private string Needed
+    {
+        get
+        {
+            var needs = PageType.GetCustomAttributes<AuthorizeAttribute>(inherit: true)
+                .Select(attribute => attribute.Policy)
+                .OfType<string>()
+                .Select(MonitorPolicies.Needs)
+                .ToList();
+
+            return needs.Count == 0 ? "a permission of the Transaction Monitor" : string.Join(" and ", needs);
+        }
+    }
+}

@@ -1,0 +1,79 @@
+/* UserModal — the account's own fields in the two-column form grid; a new account also takes its
+   first password and its access, in the order they are decided. */
+.modal.user-modal {
+    width: 560px;
+}
+
+/* A new account's dialog is as wide as the access sheet needs, and scrolls its body between a
+   header and a footer that stay put, so the tally and Add User are always in view. */
+.modal.user-modal.is-add {
+    width: 860px;
+    overflow: hidden;
+}
+
+    .modal.user-modal.is-add .modal-body {
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+/* The first-sign-in switch sits in the grid cell beside the password, level with its field. */
+.user-modal-switch {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding-top: 22px;
+}
+
+.user-switch {
+    border: none;
+    padding: 0;
+    margin-top: 1px;
+}
+
+    .user-switch:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px var(--brand-glow);
+    }
+
+    .user-switch:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+.user-modal-access {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+    .user-modal-access .section-heading {
+        margin: 2px 0 0;
+    }
+
+/* What the access picked so far comes to, kept in the footer while the sheet scrolls. */
+.user-modal-tally {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: auto;
+    min-width: 0;
+    font-size: var(--fs-label);
+    line-height: 16px;
+    color: var(--slate-600);
+    font-variant-numeric: tabular-nums;
+}
+
+    .user-modal-tally.is-none {
+        color: #B45309;
+    }
+
+    .user-modal-tally ::deep i {
+        flex: none;
+        font-size: 11px;
+    }
+
+@media (max-width: 620px) {
+    .user-modal-switch {
+        padding-top: 0;
+    }
+}

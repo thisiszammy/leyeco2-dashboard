@@ -1,0 +1,185 @@
+/* UsersTable — one line per account: who it is, what it signs in with, how much of the Transaction Monitor it
+   reaches, whether it can sign in right now, and when it last did. Rows appear without a staged
+   entrance. */
+
+/* The columns keep their shares however long a name or an address runs: the account and its
+   e-mail split what the fixed columns leave. */
+table {
+    table-layout: fixed;
+}
+
+th.col-email { width: 21%; }
+.col-access { width: 180px; }
+.col-status { width: 164px; }
+.col-signin { width: 200px; }
+.col-actions { width: 174px; text-align: right; }
+
+/* Up to five actions on one line: a locked account adds Unlock ahead of the usual four. */
+.user-actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* Identity cell — the row leads with who this account belongs to. */
+.user-ident {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.user-name {
+    min-width: 0;
+    font-weight: 500;
+    color: var(--slate-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The signed-in account's own row. */
+.user-you {
+    flex: none;
+    padding: 0 5px;
+    border: 1px solid var(--brand-rule);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    line-height: 15px;
+    color: var(--brand-primary);
+}
+
+/* What the account signs in with, beside the name and never cut: the name gives way first. */
+.user-username {
+    flex: none;
+    font-size: var(--fs-label);
+    line-height: 15px;
+    color: var(--slate-500);
+    font-variant-numeric: tabular-nums slashed-zero;
+}
+
+.user-email {
+    display: block;
+    color: var(--slate-600);
+}
+
+    .user-email.none {
+        color: var(--slate-400);
+    }
+
+/* Reach: the meter, then the same in words. */
+.user-access {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.user-access-text {
+    color: var(--slate-700);
+    font-variant-numeric: tabular-nums;
+}
+
+    .user-access-text.is-all {
+        font-weight: 600;
+        color: var(--brand-primary);
+    }
+
+    /* An account that holds nothing can't sign in: flagged, since someone is waiting on it. */
+    .user-access-text.is-none {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-weight: 500;
+        color: #B45309;
+    }
+
+        .user-access-text.is-none ::deep i {
+            font-size: 11px;
+        }
+
+/* Sign-in recency, then the exact moment. */
+.user-signin {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-lastlogin {
+    color: var(--slate-900);
+}
+
+    .user-lastlogin.never {
+        color: var(--slate-400);
+    }
+
+/* Smaller text on the same line keeps a shorter line-height, so its baseline doesn't stretch
+   the cell's 19px line. */
+.user-when {
+    margin-left: 6px;
+    font-size: var(--fs-micro);
+    line-height: 15px;
+    color: var(--slate-500);
+}
+
+/* A deactivated account stays on the register, set back: its name and reach in the quieter ink. */
+tr.is-deactivated .user-name,
+tr.is-deactivated .user-lastlogin,
+tr.is-deactivated .user-access-text {
+    color: var(--slate-500);
+}
+
+tr.is-deactivated ::deep .avatar,
+tr.is-deactivated ::deep .uam-fill {
+    filter: grayscale(1);
+    opacity: 0.6;
+}
+
+/* Skeleton row (used while loading). Same height as a data row. */
+.user-skel-avatar {
+    width: 22px;
+    height: 22px;
+    margin: -1.5px 0;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: linear-gradient(90deg,
+                var(--slate-100) 0%,
+                var(--slate-200) 50%,
+                var(--slate-100) 100%);
+    background-size: 720px 100%;
+    animation: shimmer 1.4s linear infinite;
+}
+
+.user-skel-bar {
+    height: 10px;
+    margin: 4px 0 5px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg,
+                var(--slate-100) 0%,
+                var(--slate-200) 50%,
+                var(--slate-100) 100%);
+    background-size: 720px 100%;
+    animation: shimmer 1.4s linear infinite;
+}
+
+.user-skel-bar.w-60 { width: 60%; }
+.user-skel-bar.w-40 { width: 40%; }
+.user-skel-bar.w-30 { width: 30%; }
+
+/* Under a full-HD window the room goes to the names: the exact time moves to its cell's title,
+   and the e-mail column steps out (it is still searched, and shown in Edit User). */
+@media (max-width: 1500px) {
+    .col-signin { width: 108px; }
+
+    .col-email,
+    .user-when {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .user-skel-avatar,
+    .user-skel-bar {
+        animation: none;
+    }
+}

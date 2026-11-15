@@ -1,0 +1,83 @@
+/* MainLayout — application shell: sidebar (full or rail) beside the content column,
+   which holds the scrolling page and the status line. */
+.app {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--white);
+    border-right: 1px solid var(--slate-200);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 20;
+    transition: width var(--t-base) var(--ease-out-quart),
+                min-width var(--t-base) var(--ease-out-quart);
+}
+
+/* Rail: icons only, for wide registers (payroll review, the attendance matrix). */
+.app.nav-collapsed .sidebar {
+    width: var(--sidebar-rail-w);
+    min-width: var(--sidebar-rail-w);
+}
+
+.main-area {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* The scroll container has no padding of its own: browsers inset sticky positioning by the
+   scroll container's padding, so a sticky table header at top: 0 would stop short of the edge
+   and rows would show through above it. The page's padding lives on .page-body instead, and
+   top: 0 / bottom: 0 mean the visible edges for every sticky header, axis and totals row. */
+.page-content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    /* Thin, subtle scrollbar — Firefox. */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+}
+
+    /* Thin, subtle scrollbar — WebKit / Chromium / Edge. */
+    .page-content::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    .page-content::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.55);
+        border: 2px solid transparent;
+        background-clip: padding-box;
+        border-radius: var(--radius-full);
+    }
+
+        .page-content::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(100, 116, 139, 0.7);
+        }
+
+.page-body {
+    padding: var(--page-pad-y) var(--page-pad-x) 20px;
+}
+
+@media (max-width: 768px) {
+    .page-body {
+        padding: 12px;
+    }
+}
+
+/* A phone's status line is too short for the build credit, which folds onto a second row (AppFooter). The band
+   grows to hold both rows, set here so the sidebar's version cell grows with the footer and their top rules
+   still run as one. */
+@media (max-width: 480px) {
+    .app {
+        --statusbar-h: 36px;
+    }
+}

@@ -1,0 +1,252 @@
+@namespace Leyeco2Dashboard.Client.Features.Users.Components
+
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th style="width:56px">#</th>
+                <th>User</th>
+                <th class="col-email">Email</th>
+                <th class="col-access">Access</th>
+                <th class="col-status">Status</th>
+                <th class="col-signin">Last sign-in</th>
+                <th class="col-actions">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (IsLoading)
+            {
+                for (var i = 0; i < SkeletonRowCount; i++)
+                {
+                    <tr aria-hidden="true">
+                        <td><div class="user-skel-bar w-30" style="margin-left:auto"></div></td>
+                        <td>
+                            <div class="user-ident">
+                                <div class="user-skel-avatar"></div>
+                                <div class="user-skel-bar w-60"></div>
+                            </div>
+                        </td>
+                        <td class="col-email"><div class="user-skel-bar w-60"></div></td>
+                        <td><div class="user-skel-bar w-60"></div></td>
+                        <td><div class="user-skel-bar w-40"></div></td>
+                        <td><div class="user-skel-bar w-60"></div></td>
+                        <td><div class="user-skel-bar w-40" style="margin-left:auto"></div></td>
+                    </tr>
+                }
+            }
+            else
+            {
+                @foreach (var (user, rowIndex) in Users.Select((u, i) => (u, i)))
+                {
+                    var rowNo = (CurrentPage - 1) * PageSize + rowIndex + 1;
+                    var isSelf = user.UserId == CurrentUserId;
+                    var name = string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName;
+                    var count = UserAccess.Count(user.Grants);
+                    <tr class="@(user.Status == UserAccountStatus.Deactivated ? "is-deactivated" : null)">
+                        <td class="row-num">@rowNo</td>
+                        <td>
+                            <div class="user-ident">
+                                <Avatar Name="@name" Variant="Avatar.Size.Small" />
+                                <span class="user-name" title="@name">@name</span>
+                                <span class="user-username" title="Signs in as @user.Username">@user.Username</span>
+                                @if (isSelf)
+                                {
+                                    <span class="user-you">You</span>
+                                }
+                            </div>
+                        </td>
+                        <td class="col-email">
+                            @if (string.IsNullOrWhiteSpace(user.Email))
+                            {
+                                <span class="user-email none">—</span>
+                            }
+                            else
+                            {
+                                <span class="user-email truncate" title="@user.Email">@user.Email</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="user-access" title="@UserAccess.Detail(user.Grants)">
+                                <UserAccessMeter Grants="user.Grants" />
+                                @if (user.HasAllAccess)
+                                {
+                                    <span class="user-access-text is-all">All access</span>
+                                }
+                                else if (count == 0)
+                                {
+                                    <span class="user-access-text is-none"><Icon Name="warning" />No access</span>
+                                }
+                                else
+                                {
+                                    <span class="user-access-text">@count of @UserAccess.Offered</span>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <span class="@StatusClass(user)" title="@StatusTitle(user)">
+                                <span class="status-dot"></span>
+                                @StatusLabel(user)
+                            </span>
+                        </td>
+                        <td class="user-signin" title="@(user.LastSignInOn?.ToString("dddd, MMMM d, yyyy 'at' h:mm tt"))">
+                            @if (user.LastSignInOn is DateTime signedIn)
+                            {
+                                <span class="user-lastlogin">@Recency(signedIn)</span>
+                                <span class="user-when">@signedIn.ToString("MMM d, h:mm tt")</span>
+                                <span class="sr-only">, @signedIn.ToString("MMMM d, yyyy h:mm tt")</span>
+                            }
+                            else
+                            {
+                                <span class="user-lastlogin never">Never</span>
+                            }
+                        </td>
+                        <td class="user-actions">
+                            @if (user.Status == UserAccountStatus.Locked)
+                            {
+                                <button type="button"
+                                        class="table-icon-btn"
+                                        title="Unlock @user.Username"
+                                        aria-label="Unlock @user.Username"
+                                        @onclick="() => OnUnlock.InvokeAsync(user)">
+                                    <Icon Name="unlock" />
+                                </button>
+                            }
+                            <button type="button"
+                                    class="table-icon-btn"
+                                    title="Edit @user.Username"
+                                    aria-label="Edit @user.Username"
+                                    @onclick="() => OnEdit.InvokeAsync(user)">
+                                <Icon Name="edit" />
+                            </button>
+                            <button type="button"
+                                    class="table-icon-btn"
+                                    title="Change the access of @user.Username"
+                                    aria-label="Change the access of @user.Username"
+                                    @onclick="() => OnAccess.InvokeAsync(user)">
+                                <Icon Name="userShield" />
+                            </button>
+                            <button type="button"
+                                    class="table-icon-btn"
+                                    title="@(isSelf ? OwnPasswordNote : PasswordTitle(user))"
+                                    aria-label="@(isSelf ? OwnPasswordNote : PasswordTitle(user))"
+                                    disabled="@isSelf"
+                                    @onclick="() => OnPassword.InvokeAsync(user)">
+                                <Icon Name="key" />
+                            </button>
+                            @if (user.Status == UserAccountStatus.Deactivated)
+                            {
+                                <button type="button"
+                                        class="table-icon-btn"
+                                        title="Reactivate @user.Username"
+                                        aria-label="Reactivate @user.Username"
+                                        @onclick="() => OnReactivate.InvokeAsync(user)">
+                                    <Icon Name="userCheck" />
+                                </button>
+                            }
+                            else
+                            {
+                                var deactivateTitle = isSelf ? "You can't deactivate your own account"
+                                    : user.Status == UserAccountStatus.NoPassword ? "Nothing to deactivate: this account has no password yet"
+                                    : $"Deactivate {user.Username}";
+                                <button type="button"
+                                        class="table-icon-btn danger"
+                                        title="@deactivateTitle"
+                                        aria-label="@deactivateTitle"
+                                        disabled="@(isSelf || user.Status == UserAccountStatus.NoPassword)"
+                                        @onclick="() => OnDeactivate.InvokeAsync(user)">
+                                    <Icon Name="userSlash" />
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    <div class="table-footer">
+        <span>@FooterText</span>
+        @if (!IsLoading && TotalPages > 1)
+        {
+            <Pagination CurrentPage="CurrentPage"
+                        TotalPages="TotalPages"
+                        CurrentPageChanged="OnPageChanged" />
+        }
+    </div>
+</div>
+
+@code {
+    private const string OwnPasswordNote = "Change your own password beside your name in the sidebar";
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<UserDto> Users { get; set; } = System.Array.Empty<UserDto>();
+
+    /// <summary>The signed-in account: its row is marked, and can't deactivate itself or have its password set from here.</summary>
+    [Parameter] public Guid CurrentUserId { get; set; }
+
+    /// <summary>Render shimmering skeleton rows instead of data (first load, before any page arrived).</summary>
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public int SkeletonRowCount { get; set; } = 8;
+
+    [Parameter] public string FooterText { get; set; } = "";
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; } = 1;
+
+    /// <summary>Rows per page — drives the continuous "#" numbering across pages.</summary>
+    [Parameter] public int PageSize { get; set; } = 10;
+    [Parameter] public EventCallback<int> CurrentPageChanged { get; set; }
+
+    [Parameter] public EventCallback<UserDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<UserDto> OnAccess { get; set; }
+    [Parameter] public EventCallback<UserDto> OnPassword { get; set; }
+    [Parameter] public EventCallback<UserDto> OnUnlock { get; set; }
+    [Parameter] public EventCallback<UserDto> OnDeactivate { get; set; }
+    [Parameter] public EventCallback<UserDto> OnReactivate { get; set; }
+
+    private Task OnPageChanged(int page) => CurrentPageChanged.InvokeAsync(page);
+
+    private static string PasswordTitle(UserDto user) => user.Status == UserAccountStatus.NoPassword
+        ? $"Set a password for {user.Username}"
+        : $"Reset the password of {user.Username}";
+
+    private static string StatusLabel(UserDto user) => user.Status switch
+    {
+        UserAccountStatus.Active => "Active",
+        UserAccountStatus.PasswordChangeRequired => "New password due",
+        UserAccountStatus.Locked => user.LockedUntil is DateTime until ? $"Locked until {until:h:mm tt}" : "Locked",
+        UserAccountStatus.Deactivated => "Deactivated",
+        _ => "No password",
+    };
+
+    private static string StatusTitle(UserDto user) => user.Status switch
+    {
+        UserAccountStatus.Active => "Can sign in",
+        UserAccountStatus.PasswordChangeRequired => "Must set a password of its own at its next sign-in",
+        UserAccountStatus.Locked => "Too many failed sign-ins. The lock lifts by itself, or unlock the account now",
+        UserAccountStatus.Deactivated => "Can't sign in until it is reactivated",
+        _ => "Can't sign in until a password is set for it",
+    };
+
+    // Red is kept for the lock, the one status that reports something going wrong.
+    private static string StatusClass(UserDto user) => user.Status switch
+    {
+        UserAccountStatus.Active => "status status-active",
+        UserAccountStatus.PasswordChangeRequired => "status status-info",
+        UserAccountStatus.Locked => "status status-danger",
+        UserAccountStatus.Deactivated => "status status-muted",
+        _ => "status status-leave",
+    };
+
+    /// <summary>"Just now", "12 min ago", "Yesterday", "3 days ago", then the date takes over.</summary>
+    private static string Recency(DateTime when)
+    {
+        var elapsed = DateTime.Now - when;
+
+        if (elapsed < TimeSpan.FromMinutes(1)) return "Just now";
+        if (elapsed < TimeSpan.FromHours(1)) return $"{(int)elapsed.TotalMinutes} min ago";
+        if (when.Date == DateTime.Today) return $"{(int)elapsed.TotalHours} hr ago";
+        if (when.Date == DateTime.Today.AddDays(-1)) return "Yesterday";
+        if (elapsed < TimeSpan.FromDays(30)) return $"{(int)(DateTime.Today - when.Date).TotalDays} days ago";
+        return when.ToString(when.Year == DateTime.Today.Year ? "MMM d" : "MMM d, yyyy");
+    }
+}

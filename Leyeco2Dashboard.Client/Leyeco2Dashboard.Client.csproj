@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.6" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- The version (MonitorVersion.Current): one const that Leyeco2Dashboard.App owns and this console compiles too,
+       so the version on its sign-in page and in its sidebar is the one it was built with. A file link, not a
+       project reference: the API's Debug builds already reference this project. -->
+  <ItemGroup>
+    <Compile Include="..\Leyeco2Dashboard.App\MonitorVersion.cs" Link="MonitorVersion.cs" />
+  </ItemGroup>
+
+  <!-- The grants and policies (MonitorPolicies), linked the same way, so the sidebar, the pages and their buttons
+       open exactly what the API's [Authorize] attributes let through. -->
+  <ItemGroup>
+    <Compile Include="..\Leyeco2Dashboard.App\Authorization\MonitorPolicies.cs" Link="Infrastructure\Auth\MonitorPolicies.cs" />
+  </ItemGroup>
+
+</Project>

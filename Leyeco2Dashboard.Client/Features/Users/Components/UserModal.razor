@@ -1,0 +1,368 @@
+@namespace Leyeco2Dashboard.Client.Features.Users.Components
+
+@if (Mode != ModalMode.Hidden)
+{
+<SectionContent SectionName="overlay">
+    <div class="modal-overlay">
+        <div class="modal user-modal @(Mode == ModalMode.Add ? "is-add" : null)"
+             role="dialog"
+             aria-modal="true"
+             aria-label="@Title"
+             @onclick:stopPropagation
+             @onkeydown="HandleKeyDownAsync">
+
+            <div class="modal-header">
+                <h3>@Title</h3>
+                <button type="button" class="modal-close-btn" aria-label="Close dialog" disabled="@Busy" @onclick="RequestCloseAsync">
+                    <Icon Name="x" />
+                </button>
+            </div>
+
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="modal-error" role="alert">
+                        <Icon Name="warning" />
+                        <span>@ErrorMessage</span>
+                    </div>
+                }
+
+                <div class="edit-form-grid">
+                    <div class="form-group">
+                        <label for="user-modal-first">First name</label>
+                        <input id="user-modal-first"
+                               class="ob-input"
+                               type="text"
+                               autocomplete="off"
+                               maxlength="50"
+                               disabled="@Busy"
+                               @ref="_firstNameInput"
+                               @bind="_firstName"
+                               @bind:event="oninput" />
+                        @if (_showErrors && string.IsNullOrWhiteSpace(_firstName))
+                        {
+                            <div class="field-error"><Icon Name="warning" />Enter a first name.</div>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="user-modal-last">Last name</label>
+                        <input id="user-modal-last"
+                               class="ob-input"
+                               type="text"
+                               autocomplete="off"
+                               maxlength="50"
+                               disabled="@Busy"
+                               @ref="_lastNameInput"
+                               @bind="_lastName"
+                               @bind:event="oninput" />
+                        @if (_showErrors && string.IsNullOrWhiteSpace(_lastName))
+                        {
+                            <div class="field-error"><Icon Name="warning" />Enter a last name.</div>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="user-modal-username">Username</label>
+                        <input id="user-modal-username"
+                               class="ob-input"
+                               type="text"
+                               autocomplete="off"
+                               autocapitalize="off"
+                               spellcheck="false"
+                               placeholder="e.g. j.delacruz"
+                               maxlength="50"
+                               disabled="@Busy"
+                               @ref="_usernameInput"
+                               @bind="_username"
+                               @bind:event="oninput" />
+                        @if (_showErrors && UsernameError is { } usernameError)
+                        {
+                            <div class="field-error"><Icon Name="warning" />@usernameError</div>
+                        }
+                        else
+                        {
+                            <div class="field-helper">What the account signs in with. No spaces.</div>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="user-modal-email">Email <span class="field-optional">(optional)</span></label>
+                        <input id="user-modal-email"
+                               class="ob-input"
+                               type="email"
+                               autocomplete="off"
+                               spellcheck="false"
+                               maxlength="256"
+                               disabled="@Busy"
+                               @ref="_emailInput"
+                               @bind="_email"
+                               @bind:event="oninput" />
+                        @if (_showErrors && EmailError is { } emailError)
+                        {
+                            <div class="field-error"><Icon Name="warning" />@emailError</div>
+                        }
+                    </div>
+
+                    @if (Mode == ModalMode.Add)
+                    {
+                        <div class="form-group">
+                            <label for="user-modal-password">First password</label>
+                            <PasswordInput @ref="_passwordInput"
+                                           Id="user-modal-password"
+                                           Value="@_password"
+                                           ValueChanged="OnPasswordChanged"
+                                           AllowGenerate="true"
+                                           Disabled="Busy" />
+                            @if (_showErrors && PasswordError is { } passwordError)
+                            {
+                                <div class="field-error"><Icon Name="warning" />@passwordError</div>
+                            }
+                            else
+                            {
+                                <div class="field-helper">@PasswordRules.Hint</div>
+                            }
+                        </div>
+
+                        <div class="form-group user-modal-switch">
+                            <button type="button"
+                                    class="ob-toggle user-switch"
+                                    role="switch"
+                                    aria-checked="@(_mustChangePassword ? "true" : "false")"
+                                    aria-labelledby="user-modal-must"
+                                    aria-describedby="user-modal-must-help"
+                                    style="@(_mustChangePassword ? "background:var(--brand-primary)" : "background:var(--slate-200)")"
+                                    disabled="@Busy"
+                                    @onclick="() => _mustChangePassword = !_mustChangePassword">
+                                <span class="ob-toggle-knob" style="@(_mustChangePassword ? "left:16px" : "left:2px")"></span>
+                            </button>
+                            <div>
+                                <span class="ob-field-label" id="user-modal-must" style="margin-bottom:0">Ask for a new password at first sign-in</span>
+                                <div class="field-helper" id="user-modal-must-help" style="margin-top:0">
+                                    @(_mustChangePassword
+                                        ? "The account sets a password only it knows before it gets in."
+                                        : "The account keeps this password until it changes it.")
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @if (Mode == ModalMode.Add)
+                {
+                    <div class="user-modal-access">
+                        <h4 class="section-heading">Access</h4>
+                        <UserAccessEditor IdPrefix="user-modal-access" Value="_grants" ValueChanged="OnGrantsChanged" Disabled="Busy" />
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer">
+                @if (Mode == ModalMode.Add)
+                {
+                    <span class="user-modal-tally @(_grants.Count == 0 ? "is-none" : null)" role="status">
+                        @if (_grants.Count == 0)
+                        {
+                            <Icon Name="warning" />
+                            <span>No access yet: the account can't sign in until it has some.</span>
+                        }
+                        else if (UserAccess.IsAll(_grants))
+                        {
+                            <span>All access</span>
+                        }
+                        else
+                        {
+                            <span>@UserAccess.Count(_grants) of @UserAccess.Offered permissions</span>
+                        }
+                    </span>
+                }
+                <button type="button" class="btn btn-secondary" disabled="@Busy" @onclick="RequestCloseAsync">Cancel</button>
+                <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="HandleSaveAsync">
+                    @if (Busy)
+                    {
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                        <span>@(Mode == ModalMode.Add ? "Adding…" : "Saving…")</span>
+                    }
+                    else if (Mode == ModalMode.Add)
+                    {
+                        <Icon Name="userPlus" />
+                        <span>Add User</span>
+                    }
+                    else
+                    {
+                        <Icon Name="check" />
+                        <span>Save Changes</span>
+                    }
+                </button>
+            </div>
+
+        </div>
+    </div>
+</SectionContent>
+}
+
+@code {
+    public enum ModalMode { Hidden, Add, Edit }
+
+    /// <summary>What the dialog asks the page to save. <see cref="Password"/>, <see cref="MustChangePassword"/> and <see cref="Grants"/> count for a new account only.</summary>
+    public record SaveResult(
+        Guid? UserId, string Username, string FirstName, string LastName, string Email,
+        string Password, bool MustChangePassword, IReadOnlyCollection<string> Grants);
+
+    [Parameter, EditorRequired] public ModalMode Mode { get; set; }
+    [Parameter] public UserDto? User { get; set; }
+
+    /// <summary>True while the parent is talking to the API — locks every control in the dialog.</summary>
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>Server-side failure to surface inline (e.g. "Username is already in use.").</summary>
+    [Parameter] public string? ErrorMessage { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<SaveResult> OnSave { get; set; }
+
+    private string _firstName = "";
+    private string _lastName = "";
+    private string _username = "";
+    private string _email = "";
+    private string _password = "";
+    private bool _mustChangePassword = true;
+    private IReadOnlyCollection<string> _grants = Array.Empty<string>();
+    private bool _showErrors;
+    private bool _focusPending;
+
+    private ModalMode _lastMode = ModalMode.Hidden;
+    private Guid? _lastUserId;
+
+    private ElementReference _firstNameInput;
+    private ElementReference _lastNameInput;
+    private ElementReference _usernameInput;
+    private ElementReference _emailInput;
+    private PasswordInput? _passwordInput;
+
+    private string Title => Mode == ModalMode.Add ? "Add User" : "Edit User";
+
+    private string? UsernameError
+    {
+        get
+        {
+            var username = _username.Trim();
+            if (username.Length == 0) return "Enter a username.";
+            if (username.Length < 3) return "Use at least 3 characters.";
+            if (username.Any(char.IsWhiteSpace)) return "A username can't contain spaces.";
+            return null;
+        }
+    }
+
+    // Only the shape a typo breaks; the API decides what an address is.
+    private string? EmailError
+    {
+        get
+        {
+            var email = _email.Trim();
+            if (email.Length == 0) return null;
+            var at = email.IndexOf('@');
+            return at <= 0 || at == email.Length - 1 || email.Any(char.IsWhiteSpace) ? "Enter an address like name@example.com, or leave it blank." : null;
+        }
+    }
+
+    private string? PasswordError => Mode == ModalMode.Add ? PasswordRules.Check(_password, _username) : null;
+
+    protected override void OnParametersSet()
+    {
+        // Re-initialize only when the dialog transitions (opens, or targets another account) —
+        // parent re-renders while typing (Busy/ErrorMessage updates) must not wipe the fields.
+        var userId = User?.UserId;
+        if (Mode == _lastMode && userId == _lastUserId)
+            return;
+
+        _lastMode = Mode;
+        _lastUserId = userId;
+
+        if (Mode == ModalMode.Hidden)
+            return;
+
+        _firstName = Mode == ModalMode.Edit ? User?.FirstName ?? "" : "";
+        _lastName = Mode == ModalMode.Edit ? User?.LastName ?? "" : "";
+        _username = Mode == ModalMode.Edit ? User?.Username ?? "" : "";
+        _email = Mode == ModalMode.Edit ? User?.Email ?? "" : "";
+        _password = "";
+        _mustChangePassword = true;
+        _grants = Array.Empty<string>();
+        _showErrors = false;
+        _focusPending = true;
+        _passwordInput?.Conceal();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending && Mode != ModalMode.Hidden)
+        {
+            _focusPending = false;
+            try { await _firstNameInput.FocusAsync(); }
+            catch { /* element may not be rendered yet on a fast close — never crash over focus */ }
+        }
+    }
+
+    private void OnPasswordChanged(string value) => _password = value;
+
+    private void OnGrantsChanged(IReadOnlyCollection<string> grants) => _grants = grants;
+
+    private async Task RequestCloseAsync()
+    {
+        if (Busy) return;
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            await RequestCloseAsync();
+    }
+
+    private async Task HandleSaveAsync()
+    {
+        if (Busy) return;
+
+        if (await FocusFirstInvalidAsync())
+        {
+            _showErrors = true;
+            return;
+        }
+
+        // The parent owns the outcome: it closes the dialog on success or feeds
+        // ErrorMessage back while keeping what was typed.
+        await OnSave.InvokeAsync(new SaveResult(
+            Mode == ModalMode.Edit ? User?.UserId : null,
+            _username.Trim(),
+            _firstName.Trim(),
+            _lastName.Trim(),
+            _email.Trim(),
+            _password,
+            _mustChangePassword,
+            _grants));
+    }
+
+    /// <summary>Puts the keyboard in the first field that keeps the form from saving; false when none does.</summary>
+    private async Task<bool> FocusFirstInvalidAsync()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_firstName)) { await _firstNameInput.FocusAsync(); return true; }
+            if (string.IsNullOrWhiteSpace(_lastName)) { await _lastNameInput.FocusAsync(); return true; }
+            if (UsernameError is not null) { await _usernameInput.FocusAsync(); return true; }
+            if (EmailError is not null) { await _emailInput.FocusAsync(); return true; }
+            if (PasswordError is not null)
+            {
+                if (_passwordInput is not null) await _passwordInput.FocusAsync();
+                return true;
+            }
+        }
+        catch
+        {
+            return true; // the field is invalid whether or not it took the focus
+        }
+
+        return false;
+    }
+}

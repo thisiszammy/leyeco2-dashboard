@@ -1,0 +1,442 @@
+/* Dashboard: the collections ledger by channel. The register's density: one toolbar, one ruled strip of key
+   figures, then panels in two rows, the wide one the chart or the register, the narrow one its summary. Every
+   total is footed (app.css, .ledger-foot). While a new read is under way the figures on screen step back a
+   little, so nobody reads them as the new period's. */
+
+/* The page holds its screen-reader-only words (.sr-only, absolutely placed): without a positioned box of its
+   own they would be placed against the document and lengthen it below the shell. */
+.coll-page {
+    position: relative;
+}
+
+/* The title gives way to the period picker sooner than the shell's other toolbars. */
+.coll-page ::deep .page-header-bar > .page-header {
+    flex-basis: 260px;
+}
+
+/* Peso figures to the centavo leave no room beside them: each key figure's context line goes under it. */
+.coll-page ::deep .stat-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+}
+
+    .coll-page ::deep .stat-body .stat-sub {
+        max-width: 100%;
+    }
+
+.coll-page.is-reading .kpi-strip,
+.coll-page.is-reading .panel {
+    opacity: 0.6;
+    transition: opacity var(--t-base) var(--ease-soft);
+}
+
+.coll-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.75fr) minmax(320px, 1fr);
+    gap: var(--gap);
+    margin-bottom: var(--gap);
+    align-items: start;
+}
+
+    .coll-row > .panel {
+        height: 100%;
+    }
+
+    /* The collectors' register runs long: its neighbour keeps its own height rather than a column of white. */
+    .coll-row.is-loose > .panel {
+        height: auto;
+    }
+
+.coll-head-text {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    min-width: 0;
+}
+
+.coll-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.coll-note {
+    margin-top: 8px;
+    font-size: var(--fs-label);
+    line-height: 16px;
+    color: var(--slate-500);
+}
+
+/* A failed re-read: the figures stay, and this says they are the earlier ones. */
+.coll-stale {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: var(--gap);
+    padding: 8px 12px;
+    border: 1px solid #FDE68A;
+    border-radius: var(--radius-lg);
+    background: var(--amber-100);
+    font-size: var(--fs-body);
+    line-height: 19px;
+    color: #92400E;
+}
+
+    .coll-stale i {
+        margin-top: 3px;
+        font-size: 12px;
+    }
+
+/* ── Loading ── */
+.coll-chart-skeleton {
+    height: 236px;
+}
+
+.coll-split-skeleton {
+    height: 24px;
+    margin-bottom: 12px;
+}
+
+.coll-rows-skeleton {
+    height: 150px;
+}
+
+    .coll-rows-skeleton.is-tall {
+        height: 320px;
+    }
+
+/* ── By channel: the split, then its register, footed ── */
+.coll-channels {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.coll-ledger th,
+.coll-ledger td {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+    .coll-ledger th:first-child,
+    .coll-ledger td:first-child {
+        padding-left: 0;
+    }
+
+    .coll-ledger th:last-child,
+    .coll-ledger td:last-child {
+        padding-right: 0;
+    }
+
+.coll-ledger thead th {
+    position: static;
+    background: none;
+    border-bottom-color: var(--slate-150);
+}
+
+.coll-ledger tbody th {
+    padding-top: var(--cell-py);
+    padding-bottom: var(--cell-py);
+    font-size: var(--fs-body);
+    font-weight: 500;
+    line-height: 19px;
+    color: var(--slate-900);
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--slate-100);
+}
+
+    .coll-ledger tbody th .swatch-dot {
+        margin-right: 4px;
+    }
+
+.coll-ledger tbody tr:last-child th,
+.coll-ledger tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.coll-ledger tbody tr:hover {
+    background: none;
+}
+
+/* ── By town ──
+   A short register (four towns and their total) ruled as a ledger: each row headed by its town's code, in a slot
+   of its own so the names line up, then its figures, then its channel mix, so reading down that column compares
+   how the towns pay. Narrower than its figures, it scrolls sideways inside the panel; too short to need a header
+   that sticks. */
+.coll-towns {
+    margin-bottom: var(--gap);
+}
+
+.coll-towns-scroll {
+    overflow-x: auto;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.coll-town-ledger {
+    table-layout: auto;
+}
+
+    .coll-town-ledger thead th {
+        position: static;
+    }
+
+    .coll-town-ledger tbody th {
+        padding: var(--cell-py) var(--cell-px);
+        font-size: var(--fs-body);
+        font-weight: 500;
+        line-height: 19px;
+        color: var(--slate-900);
+        text-align: left;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--slate-100);
+    }
+
+    .coll-town-ledger tbody tr:last-child th {
+        border-bottom: none;
+    }
+
+.coll-town {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    vertical-align: top;
+}
+
+/* A record's code ahead of its name, ledger style, in a slot of its own so the names line up down the column:
+   a town's ("01 Tacloban") and a collector's ("AK shiela"). */
+.coll-code {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 28px;
+}
+
+    /* 15px, so the badge sits inside the row's 19px line. */
+    .coll-code .card-badge {
+        line-height: 15px;
+    }
+
+        /* No code: the dashes stand where its characters would, unboxed, so they read as an absence and not as
+           a code. */
+        .coll-code .card-badge.is-none {
+            background: none;
+            color: var(--slate-500);
+        }
+
+/* The channel mix takes what the figures leave, and never less than a bar whose shares can still be read. */
+.coll-mix-col {
+    width: 36%;
+    padding-left: 20px;
+}
+
+    .coll-mix-col ::deep .split {
+        min-width: 200px;
+    }
+
+/* The matrix: a channel's swatch heads its column, which is the key; the row's total is ruled off the channels
+   it sums. */
+.coll-th-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.coll-matrix-total {
+    box-shadow: inset 1px 0 0 var(--slate-150);
+}
+
+    tbody .coll-matrix-total {
+        font-weight: 500;
+    }
+
+.coll-towns-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 16px;
+    padding: 8px 12px 10px;
+}
+
+    .coll-towns-foot .coll-note {
+        margin: 0;
+    }
+
+.coll-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    list-style: none;
+    font-size: var(--fs-label);
+    line-height: 16px;
+    color: var(--slate-600);
+}
+
+    .coll-key li {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+/* ── Collectors ── */
+.coll-register {
+    overflow: clip;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+    .coll-register table {
+        table-layout: auto;
+    }
+
+    .coll-register thead th {
+        top: 0;
+    }
+
+.coll-collector {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 220px;
+}
+
+.coll-channel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+/* A block-level flex, not inline: inline, the meter sat on the text's baseline and stretched every row to 34px. */
+.coll-share {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* A thin meter against the leading collector: the shape of the register at a glance. */
+.coll-meter {
+    display: inline-block;
+    width: 64px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--slate-100);
+    overflow: hidden;
+}
+
+    .coll-meter i {
+        display: block;
+        height: 100%;
+        border-radius: 3px;
+    }
+
+.coll-register .table-footer {
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+/* ── Last posted ── */
+.coll-last {
+    list-style: none;
+}
+
+    .coll-last li {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 10px;
+        min-height: 40px;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--slate-100);
+    }
+
+        .coll-last li:last-child {
+            border-bottom: none;
+        }
+
+.coll-last-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: var(--slate-900);
+}
+
+.coll-last-when {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-variant-numeric: tabular-nums;
+    color: var(--slate-900);
+    line-height: 17px;
+}
+
+    .coll-last-when small {
+        font-size: var(--fs-micro);
+        line-height: 14px;
+        color: var(--slate-500);
+    }
+
+    .coll-last-when.is-none {
+        grid-column: 2 / -1;
+        color: var(--slate-400);
+    }
+
+.coll-last-note {
+    margin: 0;
+    padding: 8px 12px 10px;
+    border-top: 1px solid var(--slate-100);
+}
+
+@media (max-width: 1180px) {
+    .coll-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .coll-row > .panel {
+        height: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .coll-tools {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .coll-register {
+        overflow-x: auto;
+    }
+
+    .coll-share-col {
+        display: none;
+    }
+
+    /* The towns' figures scroll under their names, which stay in view, ruled off at the cut. */
+    .coll-town-ledger th:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--white);
+        box-shadow: inset -1px 0 0 var(--slate-150);
+    }
+
+    .coll-town-ledger thead th:first-child,
+    .coll-town-ledger tbody tr:hover th {
+        background: var(--slate-50);
+    }
+
+    /* Pesos to the centavo in a phone's width: a step smaller, and a long channel name wraps. */
+    .coll-ledger th,
+    .coll-ledger td {
+        padding-left: 4px;
+        padding-right: 4px;
+        font-size: var(--fs-label);
+    }
+
+    .coll-ledger tbody th {
+        white-space: normal;
+    }
+}

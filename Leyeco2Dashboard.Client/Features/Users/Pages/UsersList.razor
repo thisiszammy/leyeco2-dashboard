@@ -1,0 +1,476 @@
+@page "/administration/users"
+@attribute [Authorize(Policy = MonitorPolicies.ManageUsers)]
+@namespace Leyeco2Dashboard.Client.Features.Users.Pages
+@implements IDisposable
+@inject UsersApiClient UsersApi
+@inject SessionAuthenticationStateProvider AuthState
+@inject ToastService Toasts
+
+<PageTitle>Users — Leyeco II</PageTitle>
+
+@* The Transaction Monitor's own accounts: who signs in, with what password, and what each may open. Accounts are
+   deactivated, never deleted: the audit trail names them. *@
+<div class="users-page">
+    <div class="page-header-bar">
+        <div class="page-header" style="margin-bottom:0">
+            <h2>Users</h2>
+            <p class="subtitle">The accounts that sign in to the Transaction Monitor, and what each one may open.</p>
+        </div>
+        @if (_loadError is null || _page is not null)
+        {
+            <div class="page-header-actions">
+                <label class="search-field">
+                    <Icon Name="search" />
+                    <input class="ob-input"
+                           type="text"
+                           placeholder="Search by name, username or email…"
+                           aria-label="Search users by name, username or email"
+                           value="@_search"
+                           @oninput="OnSearchInput" />
+                </label>
+                <button type="button" class="btn btn-primary" @onclick="OpenAdd">
+                    <Icon Name="userPlus" />
+                    Add User
+                </button>
+            </div>
+        }
+    </div>
+
+    <div class="kpi-strip">
+        <KpiCard Label="Users"
+                 Value="@(_page?.TotalUsers.ToString("N0") ?? "—")"
+                 IconName="userGear"
+                 IconTone="brand"
+                 BadgeText="All records"
+                 BadgeTone="gray" />
+        <KpiCard Label="Active"
+                 Value="@(_page?.ActiveUsers.ToString("N0") ?? "—")"
+                 IconName="userCheck"
+                 IconTone="green"
+                 BadgeText="Enabled"
+                 BadgeTone="green" />
+        <KpiCard Label="Needs attention"
+                 Value="@(_page?.AttentionUsers.ToString("N0") ?? "—")"
+                 IconName="lock"
+                 IconTone="red"
+                 BadgeText="Review"
+                 BadgeTone="amber" />
+        <KpiCard Label="Deactivated"
+                 Value="@(_page?.DeactivatedUsers.ToString("N0") ?? "—")"
+                 IconName="userSlash"
+                 IconTone="blue"
+                 BadgeText="Can't sign in"
+                 BadgeTone="gray" />
+    </div>
+
+    @if (_loadError is not null && _page is null)
+    {
+        <div class="page-error" role="alert">
+            <div class="icon-circle"><Icon Name="warning" /></div>
+            <h4>Couldn't load users</h4>
+            <p>@_loadError</p>
+            <button type="button" class="btn btn-secondary" @onclick="ReloadAsync">
+                <Icon Name="replace" />
+                Try Again
+            </button>
+        </div>
+    }
+    else
+    {
+        <Tabs TValue="string" Items="StatusTabs" Selected="_status" SelectedChanged="ChangeStatusAsync" />
+
+        @if (_page is not null && !_isLoading && _page.Items.Count == 0)
+        {
+            @if (HasActiveSearch)
+            {
+                <div class="empty-state">
+                    <div class="icon-circle"><Icon Name="search" /></div>
+                    <h4>No users match your search</h4>
+                    <p>No account @(_status.Length == 0 ? "on file" : "under this tab") has "@_search.Trim()" in its name, username or email. Try a different term, or clear the search.</p>
+                    <button type="button" class="btn btn-secondary" @onclick="ClearSearchAsync">
+                        <Icon Name="x" />
+                        Clear Search
+                    </button>
+                </div>
+            }
+            else if (_status == "attention")
+            {
+                <div class="empty-state">
+                    <div class="icon-circle"><Icon Name="circleCheck" /></div>
+                    <h4>Nothing needs attention</h4>
+                    <p>No account is locked, waiting on a password, or without any access.</p>
+                </div>
+            }
+            else if (_status == "deactivated")
+            {
+                <div class="empty-state">
+                    <div class="icon-circle"><Icon Name="userSlash" /></div>
+                    <h4>No deactivated users</h4>
+                    <p>An account you deactivate is listed here, where it can be reactivated.</p>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <div class="icon-circle"><Icon Name="userGear" /></div>
+                    <h4>No users under this tab</h4>
+                    <p>Add a user to give someone an account of their own.</p>
+                    <button type="button" class="btn btn-secondary" @onclick="OpenAdd">
+                        <Icon Name="userPlus" />
+                        Add User
+                    </button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="users-table-shell @(_isLoading && _page is not null ? "is-refreshing" : null)">
+                <UsersTable Users="@(_page?.Items ?? EmptyUsers)"
+                            CurrentUserId="CurrentUserId"
+                            IsLoading="@(_isLoading && _page is null)"
+                            SkeletonRowCount="8"
+                            FooterText="@FooterText"
+                            CurrentPage="_currentPage"
+                            PageSize="PageSize"
+                            TotalPages="@(_page?.TotalPages ?? 1)"
+                            CurrentPageChanged="ChangePageAsync"
+                            OnEdit="OpenEdit"
+                            OnAccess="OpenAccess"
+                            OnPassword="OpenPassword"
+                            OnUnlock="UnlockAsync"
+                            OnDeactivate="OpenDeactivate"
+                            OnReactivate="OpenReactivate" />
+            </div>
+        }
+    }
+
+    <UserModal Mode="_userModalMode"
+               User="_selected"
+               Busy="_busy"
+               ErrorMessage="@_dialogError"
+               OnClose="CloseDialogs"
+               OnSave="SaveUserAsync" />
+
+    <UserAccessModal IsOpen="@(_dialog == Dialog.Access)"
+                     User="_selected"
+                     IsSelf="@(_selected?.UserId == CurrentUserId)"
+                     Busy="_busy"
+                     ErrorMessage="@_dialogError"
+                     OnClose="CloseDialogs"
+                     OnSave="SaveAccessAsync" />
+
+    <UserPasswordModal IsOpen="@(_dialog == Dialog.Password)"
+                       User="_selected"
+                       Busy="_busy"
+                       ErrorMessage="@_dialogError"
+                       Issued="_issued"
+                       OnClose="CloseDialogs"
+                       OnSave="SavePasswordAsync" />
+
+    <UserStatusModal IsOpen="@(_dialog is Dialog.Deactivate or Dialog.Reactivate)"
+                     User="_selected"
+                     Activate="@(_dialog == Dialog.Reactivate)"
+                     Busy="_busy"
+                     ErrorMessage="@_dialogError"
+                     OnClose="CloseDialogs"
+                     OnConfirm="SaveStatusAsync" />
+</div>
+
+@code {
+    private const int PageSize = 20;
+    private const int SearchDebounceMs = 300;
+
+    private enum Dialog { None, Add, Edit, Access, Password, Deactivate, Reactivate }
+
+    private static readonly IReadOnlyList<UserDto> EmptyUsers = Array.Empty<UserDto>();
+
+    // The key figures above carry the counts, so the tabs name the views and nothing more.
+    private static readonly IReadOnlyList<Tabs<string>.TabItem> StatusTabs = new Tabs<string>.TabItem[]
+    {
+        new("", "All users"),
+        new("active", "Active"),
+        new("attention", "Needs attention"),
+        new("deactivated", "Deactivated"),
+    };
+
+    private string _search = "";
+    private string _status = "";
+    private int _currentPage = 1;
+
+    private UserPage? _page;
+    private bool _isLoading;
+    private string? _loadError;
+
+    private Dialog _dialog = Dialog.None;
+    private UserDto? _selected;
+    private bool _busy;
+    private string? _dialogError;
+    private UserPasswordModal.IssuedPassword? _issued;
+    private Guid? _unlocking;
+
+    private CancellationTokenSource? _debounceCts;
+    private CancellationTokenSource? _loadCts;
+
+    private Guid CurrentUserId => AuthState.CurrentUser?.UserId ?? Guid.Empty;
+
+    private bool HasActiveSearch => !string.IsNullOrWhiteSpace(_search);
+
+    private UserModal.ModalMode _userModalMode => _dialog switch
+    {
+        Dialog.Add => UserModal.ModalMode.Add,
+        Dialog.Edit => UserModal.ModalMode.Edit,
+        _ => UserModal.ModalMode.Hidden,
+    };
+
+    private string FooterText
+    {
+        get
+        {
+            if (_page is null) return "Loading users…";
+            if (_page.TotalCount == 0) return "No results";
+            var start = (_page.Page - 1) * _page.PageSize + 1;
+            var end = start + _page.Items.Count - 1;
+            return $"Showing {start}–{end} of {_page.TotalCount} users";
+        }
+    }
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    /// <summary>
+    /// Fetches the current page from the API. Only the newest call is allowed to touch component
+    /// state — anything superseded by a fresh search keystroke, tab or page change returns silently.
+    /// A failed first load becomes the full-page error state; a failed refresh keeps the data on
+    /// screen and reports through a toast instead.
+    /// </summary>
+    private async Task LoadAsync()
+    {
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+        var cts = _loadCts = new CancellationTokenSource();
+
+        _isLoading = true;
+        _loadError = null;
+
+        try
+        {
+            var page = await UsersApi.GetPageAsync(_search, _status, _currentPage, PageSize, cts.Token);
+            if (cts != _loadCts) return;
+
+            _page = page;
+            _currentPage = page.Page; // adopt the server-clamped page (the list may have shrunk since the last load)
+        }
+        catch (OperationCanceledException)
+        {
+            return; // superseded — the newer request owns the UI state
+        }
+        catch (ApiException ex)
+        {
+            if (cts != _loadCts) return;
+
+            if (_page is null)
+                _loadError = ex.Message;
+            else
+                Toasts.Error("Couldn't refresh users", ex.Message);
+        }
+        finally
+        {
+            if (cts == _loadCts)
+                _isLoading = false;
+        }
+    }
+
+    private Task ReloadAsync() => LoadAsync();
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _debounceCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(SearchDebounceMs, _debounceCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return; // a newer keystroke restarted the debounce window
+        }
+
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task ClearSearchAsync()
+    {
+        _debounceCts?.Cancel();
+        _search = "";
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task ChangeStatusAsync(string status)
+    {
+        if (_status == status) return;
+
+        _status = status;
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task ChangePageAsync(int page)
+    {
+        _currentPage = page;
+        await LoadAsync();
+    }
+
+    private void OpenAdd() => Open(Dialog.Add, null);
+    private void OpenEdit(UserDto user) => Open(Dialog.Edit, user);
+    private void OpenAccess(UserDto user) => Open(Dialog.Access, user);
+    private void OpenPassword(UserDto user) => Open(Dialog.Password, user);
+    private void OpenDeactivate(UserDto user) => Open(Dialog.Deactivate, user);
+    private void OpenReactivate(UserDto user) => Open(Dialog.Reactivate, user);
+
+    private void Open(Dialog dialog, UserDto? user)
+    {
+        _selected = user;
+        _dialogError = null;
+        _dialog = dialog;
+    }
+
+    private void CloseDialogs()
+    {
+        _dialog = Dialog.None;
+        _selected = null;
+        _dialogError = null;
+        _issued = null; // the password goes with the dialog: nothing keeps it after
+    }
+
+    private Task SaveUserAsync(UserModal.SaveResult result) => RunAsync(async () =>
+    {
+        if (result.UserId is Guid userId)
+        {
+            await UsersApi.UpdateAsync(userId, result.Username, result.FirstName, result.LastName, result.Email);
+            Toasts.Success("Changes saved", $"User '{result.Username}' was updated.");
+            return;
+        }
+
+        await UsersApi.AddAsync(
+            result.Username, result.FirstName, result.LastName, result.Email,
+            result.Password, result.MustChangePassword, result.Grants);
+
+        if (result.Grants.Count == 0)
+            Toasts.Info("User added", $"'{result.Username}' has no access yet, so it can't sign in. Give it some with Change access.");
+        else
+            Toasts.Success("User added", result.MustChangePassword
+                ? $"'{result.Username}' will set a new password at its first sign-in."
+                : $"'{result.Username}' can sign in with the password you set.");
+    });
+
+    private Task SaveAccessAsync(IReadOnlyCollection<string> grants) => RunAsync(async () =>
+    {
+        if (_selected is not { } user) return;
+
+        await UsersApi.SetAccessAsync(user.UserId, grants);
+
+        var summary = UserAccess.IsAll(grants) ? "All access"
+            : grants.Count == 0 ? "no access, and can't sign in"
+            : $"{UserAccess.Count(grants)} of {UserAccess.Offered} permissions";
+        Toasts.Success("Access saved", $"'{user.Username}' now holds {summary}.");
+    });
+
+    /// <summary>
+    /// Sets or resets another account's password. On success the dialog stays open and turns to the handover
+    /// (username and password, with Copy), which confirms the save in place of a toast: the password is shown
+    /// nowhere else, and never again once the dialog closes.
+    /// </summary>
+    private Task SavePasswordAsync(UserPasswordModal.SaveResult result) => RunAsync(async () =>
+    {
+        if (_selected is not { } user) return;
+
+        await UsersApi.ResetPasswordAsync(user.UserId, result.Password, result.MustChangePassword);
+
+        _issued = new UserPasswordModal.IssuedPassword(
+            user.Username, result.Password, result.MustChangePassword,
+            IsFirstPassword: user.Status == UserAccountStatus.NoPassword);
+    }, closeOnSuccess: false);
+
+    private Task SaveStatusAsync() => RunAsync(async () =>
+    {
+        if (_selected is not { } user) return;
+
+        var activate = _dialog == Dialog.Reactivate;
+        await UsersApi.SetActiveAsync(user.UserId, activate);
+
+        if (activate)
+            Toasts.Success("User reactivated", $"'{user.Username}' can sign in again.");
+        else
+            Toasts.Success("User deactivated", $"'{user.Username}' was signed out and can't sign in.");
+    });
+
+    /// <summary>
+    /// Runs a dialog's save: on success the dialog closes (or, with <paramref name="closeOnSuccess"/> off, shows
+    /// what the save left it to show) and the register reloads behind it; a refusal stays in the dialog, in the
+    /// API's words, with what was typed intact.
+    /// </summary>
+    private async Task RunAsync(Func<Task> save, bool closeOnSuccess = true)
+    {
+        if (_busy) return;
+
+        _busy = true;
+        _dialogError = null;
+
+        try
+        {
+            await save();
+
+            // The save is done: let the dialog go (or turn) now, not once the register has reloaded.
+            _busy = false;
+            if (closeOnSuccess)
+                CloseDialogs();
+            StateHasChanged();
+
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            _dialogError = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>Lifting a lock takes nothing away, so it asks nothing: one click, and a toast.</summary>
+    private async Task UnlockAsync(UserDto user)
+    {
+        if (_unlocking is not null) return;
+
+        _unlocking = user.UserId;
+        try
+        {
+            await UsersApi.UnlockAsync(user.UserId);
+            Toasts.Success("User unlocked", $"'{user.Username}' can sign in again.");
+        }
+        catch (ApiException ex)
+        {
+            Toasts.Error("Couldn't unlock the user", ex.Message);
+        }
+        finally
+        {
+            _unlocking = null;
+        }
+
+        await LoadAsync();
+    }
+
+    public void Dispose()
+    {
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+    }
+}

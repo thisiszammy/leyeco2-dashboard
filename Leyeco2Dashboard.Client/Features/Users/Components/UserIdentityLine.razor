@@ -1,0 +1,27 @@
+@namespace Leyeco2Dashboard.Client.Features.Users.Components
+
+@* Whose account a dialog is about to change: the first thing read in it, so the wrong row is
+   caught before anything is saved. *@
+@if (User is not null)
+{
+    <div class="uil">
+        <Avatar Name="@Name" />
+        <div class="uil-text">
+            <span class="uil-name">
+                @Name
+                @if (IsSelf)
+                {
+                    <span class="uil-you">You</span>
+                }
+            </span>
+            <span class="uil-handle">Signs in as <span class="t-code">@User.Username</span></span>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public UserDto? User { get; set; }
+    [Parameter] public bool IsSelf { get; set; }
+
+    private string Name => string.IsNullOrWhiteSpace(User?.FullName) ? User?.Username ?? "" : User.FullName;
+}

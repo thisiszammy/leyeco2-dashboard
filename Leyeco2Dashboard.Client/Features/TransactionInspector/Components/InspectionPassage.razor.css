@@ -1,0 +1,194 @@
+/* The passage: one ruled panel, three books in posting order. It is the page's headline panel, so it takes the gold
+   top rule; the books are ruled apart like a ledger's columns, and the hand-off between two sits on their rule. */
+.ti-passage {
+    position: relative;
+    margin-bottom: var(--gap);
+    border-top: 2px solid var(--gold-primary);
+}
+
+.ti-books {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ti-book {
+    position: relative;
+    min-width: 0;
+    padding: 10px 16px 12px;
+}
+
+    .ti-book + .ti-book {
+        border-left: 1px solid var(--slate-150);
+    }
+
+/* The hand-off: a chevron in a white disc, centred on the column rule at the headline's height. */
+.ti-handoff {
+    position: absolute;
+    top: 33px;
+    left: -10px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 19px;
+    height: 19px;
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-full);
+    background: var(--white);
+    color: var(--slate-500);
+    font-size: 8.5px;
+}
+
+.ti-book-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 8px;
+    line-height: 18px;
+}
+
+.ti-book-name {
+    font-family: var(--font-heading);
+    font-size: var(--fs-title);
+    font-weight: 600;
+    color: var(--brand-primary);
+}
+
+.ti-book-role {
+    font-size: var(--fs-label);
+    color: var(--slate-500);
+}
+
+.ti-book-figure {
+    margin-top: 4px;
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 26px;
+    color: var(--slate-900);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.ti-book-sub {
+    font-size: var(--fs-label);
+    line-height: 16px;
+    color: var(--slate-500);
+}
+
+/* The statuses: a compact register under the figure, its amounts lined up down the column. */
+.ti-lines {
+    margin-top: 8px;
+    border-top: 1px solid var(--slate-150);
+}
+
+    .ti-lines th,
+    .ti-lines td {
+        padding: 4px 0;
+        font-size: var(--fs-label);
+        line-height: 16px;
+        border-bottom: 1px solid var(--slate-100);
+        background: none;
+    }
+
+    .ti-lines tbody th {
+        font-weight: 500;
+        color: var(--slate-700);
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 0;
+        width: 100%;
+    }
+
+    .ti-lines td.num {
+        padding-left: 12px;
+        color: var(--slate-900);
+    }
+
+    .ti-lines tbody tr:last-child th,
+    .ti-lines tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .ti-lines tbody tr:hover {
+        background: none;
+    }
+
+.ti-none {
+    color: var(--slate-500);
+}
+
+/* A status's tone: ink as it should be, amber waiting, red failed, slate never paid, pencil not there at all. */
+.ti-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin: 0 7px 1px 1px;
+    border-radius: 50%;
+    vertical-align: middle;
+    background: var(--slate-400);
+}
+
+    .ti-dot.is-ink { background: var(--slate-900); }
+    .ti-dot.is-wait { background: var(--amber-600); }
+    .ti-dot.is-fail { background: var(--red-primary); }
+    .ti-dot.is-mute { background: var(--slate-300); }
+
+    .ti-dot.is-pencil {
+        background: none;
+        border: 1px dashed var(--slate-400);
+    }
+
+/* The ledger's closing line: how far it stands from the facility, in words (the icon only repeats them). */
+.ti-closing {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 7px;
+    border-top: 1px solid var(--slate-700);
+    font-size: var(--fs-body);
+    font-weight: 600;
+    line-height: 18px;
+}
+
+    .ti-closing ::deep i {
+        font-size: 12px;
+    }
+
+    .ti-closing.is-short { color: var(--red-primary); }
+    .ti-closing.is-level { color: var(--green-600); }
+
+.ti-skel-figure {
+    height: 26px;
+    width: 60%;
+    margin-top: 6px;
+}
+
+.ti-skel-lines {
+    height: 104px;
+    margin-top: 10px;
+}
+
+/* Narrow: the books stack in their order, and the hand-off turns to point down the page. */
+@media (max-width: 980px) {
+    .ti-books {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ti-book + .ti-book {
+        border-left: none;
+        border-top: 1px solid var(--slate-150);
+    }
+
+    .ti-handoff {
+        top: -10px;
+        left: 24px;
+        transform: rotate(90deg);
+    }
+}

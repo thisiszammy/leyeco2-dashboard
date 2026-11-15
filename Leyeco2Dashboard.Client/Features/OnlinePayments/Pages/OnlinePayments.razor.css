@@ -1,0 +1,209 @@
+/* Online Payments: the overall dashboard's layout (Dashboard.razor.css) for the facility's payments, then the
+   reconciliation still in pencil. Kept as its own copy, not shared: the two pages are free to part ways as
+   reconciliation fills in. */
+
+/* Holds the screen-reader-only words (.sr-only) inside the page, as the dashboard's root does. */
+.otf-page {
+    position: relative;
+}
+
+.otf-page .page-header-bar > .page-header {
+    flex-basis: 260px;
+}
+
+/* Peso figures to the centavo leave no room beside them: each key figure's context line goes under it. */
+.otf-page ::deep .stat-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+}
+
+    .otf-page ::deep .stat-body .stat-sub {
+        max-width: 100%;
+    }
+
+.otf-page.is-reading .kpi-strip,
+.otf-page.is-reading .otf-row .panel {
+    opacity: 0.6;
+    transition: opacity var(--t-base) var(--ease-soft);
+}
+
+.otf-error {
+    margin-bottom: var(--gap);
+}
+
+.otf-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.75fr) minmax(320px, 1fr);
+    gap: var(--gap);
+    margin-bottom: var(--gap);
+}
+
+    .otf-row.is-even {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+.otf-head-text {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    min-width: 0;
+}
+
+.otf-tools {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.otf-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.otf-note {
+    margin-top: 8px;
+    font-size: var(--fs-label);
+    line-height: 16px;
+    color: var(--slate-500);
+}
+
+.otf-stack .otf-note {
+    margin-top: -4px;
+}
+
+.otf-stale {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: var(--gap);
+    padding: 8px 12px;
+    border: 1px solid #FDE68A;
+    border-radius: var(--radius-lg);
+    background: var(--amber-100);
+    font-size: var(--fs-body);
+    line-height: 19px;
+    color: #92400E;
+}
+
+    .otf-stale i {
+        margin-top: 3px;
+        font-size: 12px;
+    }
+
+/* ── Loading ── */
+.otf-chart-skeleton {
+    height: 236px;
+}
+
+.otf-split-skeleton {
+    height: 24px;
+}
+
+.otf-rows-skeleton {
+    height: 150px;
+}
+
+/* ── The summary registers, footed ── */
+.otf-ledger th,
+.otf-ledger td {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+    .otf-ledger th:first-child,
+    .otf-ledger td:first-child {
+        padding-left: 0;
+    }
+
+    .otf-ledger th:last-child,
+    .otf-ledger td:last-child {
+        padding-right: 0;
+    }
+
+.otf-ledger thead th {
+    position: static;
+    background: none;
+    border-bottom-color: var(--slate-150);
+}
+
+.otf-ledger tbody th {
+    padding-top: var(--cell-py);
+    padding-bottom: var(--cell-py);
+    font-size: var(--fs-body);
+    font-weight: 500;
+    line-height: 19px;
+    color: var(--slate-900);
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--slate-100);
+}
+
+    .otf-ledger tbody th .swatch-dot {
+        margin-right: 4px;
+    }
+
+.otf-ledger tbody tr:last-child th,
+.otf-ledger tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.otf-ledger tbody tr:hover {
+    background: none;
+}
+
+.otf-none {
+    color: var(--slate-500);
+}
+
+/* Bills per payment: a bar per band against the commonest, in the first series' navy (one series, no key). */
+.otf-band-cell {
+    width: 40%;
+}
+
+.otf-band {
+    display: block;
+    height: 10px;
+    border-radius: 0 3px 3px 0;
+    background: var(--slate-100);
+    overflow: hidden;
+}
+
+    .otf-band i {
+        display: block;
+        height: 100%;
+        border-radius: 0 3px 3px 0;
+        background: var(--series-1);
+    }
+
+@media (max-width: 1180px) {
+    .otf-row,
+    .otf-row.is-even {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .otf-tools {
+        width: 100%;
+    }
+
+    .otf-band-cell {
+        display: none;
+    }
+
+    /* Pesos to the centavo in a phone's width: a step smaller, and a long name wraps. */
+    .otf-ledger th,
+    .otf-ledger td {
+        padding-left: 4px;
+        padding-right: 4px;
+        font-size: var(--fs-label);
+    }
+
+    .otf-ledger tbody th {
+        white-space: normal;
+    }
+}

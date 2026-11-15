@@ -1,0 +1,86 @@
+/* The Transaction Inspector: the toolbar, the passage (InspectionPassage), the views, a filter bar, the register
+   (InspectionRegister). The toolbar, tabs, filter bar and empty states are app.css's; this file keeps the page's
+   own arrangement. */
+
+/* Holds the screen-reader-only words (.sr-only) inside the page, as the dashboards' roots do. */
+.ti-page {
+    position: relative;
+}
+
+    .ti-page .page-header-bar > .page-header {
+        flex-basis: 260px;
+    }
+
+.ti-page.is-reading ::deep .ti-passage {
+    opacity: 0.6;
+    transition: opacity var(--t-base) var(--ease-soft);
+}
+
+.ti-error {
+    margin-bottom: var(--gap);
+}
+
+.ti-stale {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: var(--gap);
+    padding: 8px 12px;
+    border: 1px solid #FDE68A;
+    border-radius: var(--radius-lg);
+    background: var(--amber-100);
+    font-size: var(--fs-body);
+    line-height: 19px;
+    color: #92400E;
+}
+
+    .ti-stale ::deep i {
+        margin-top: 3px;
+        font-size: 12px;
+    }
+
+/* The filter bar: the search, the providers, and the exports at the far end, since they print what is listed. */
+.ti-search {
+    width: 300px;
+}
+
+    .ti-search input[type="search"]::-webkit-search-cancel-button {
+        cursor: pointer;
+    }
+
+.ti-export {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+}
+
+/* The register dims, and keeps, the page it shows while a newer view, filter or page is read. */
+.ti-register-shell {
+    transition: opacity var(--t-base) var(--ease-out-quart);
+}
+
+    .ti-register-shell.is-refreshing {
+        opacity: 0.55;
+        pointer-events: none;
+    }
+
+.ti-empty {
+    margin-bottom: var(--gap);
+}
+
+@media (max-width: 640px) {
+    .ti-search {
+        width: 100%;
+    }
+
+    .ti-export {
+        margin-left: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ti-register-shell,
+    .ti-page.is-reading ::deep .ti-passage {
+        transition: none;
+    }
+}

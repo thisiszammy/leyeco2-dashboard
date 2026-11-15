@@ -1,0 +1,349 @@
+/* The register: a bill one 32px line. Its columns are fixed (table-layout: fixed), so the account takes what the
+   others leave, and a long name truncates instead of widening the table; the line needs 1,252px in all, the page
+   beside the sidebar's rail at 1366px. While the panel holds that, the column heads stick to the page's scroll
+   (app.css §8). Narrower, the register scrolls sideways inside its panel, as this console's wide registers do: the
+   heads scroll with it, and the margin and the account stay pinned while the books slide under them. The panel is
+   the query container, so the switch follows the room the register has, whether the sidebar is open or a rail. */
+.ti-register {
+    container-type: inline-size;
+}
+
+.ti-scroll table {
+    table-layout: fixed;
+}
+
+/* Measured on real bills: a payment's reference and "Jun 6, 10:52 PM"; a status and an amount to ₱99,999.99 per
+   book, the ledger's "Via Bayad Center" the longest; "Credited, not paid". The account takes the rest, 220px at least. */
+/* The margin holds its mark (positioned on the gold rule, below); pinned, its sticky position holds it as well. */
+.ti-num {
+    position: relative;
+}
+
+.ti-w-num { width: 56px; }
+.ti-w-bill { width: 78px; }
+.ti-w-payment { width: 184px; }
+.ti-w-facility { width: 170px; }
+.ti-w-queue { width: 158px; }
+.ti-w-ledger { width: 212px; }
+.ti-w-verdict { width: 136px; }
+.ti-w-action { width: 38px; }
+
+@container (max-width: 1251px) {
+    .ti-scroll {
+        overflow-x: auto;
+    }
+
+        .ti-scroll table {
+            min-width: 1252px;
+        }
+
+    .ti-scroll .ti-pin,
+    .ti-scroll .ti-pin-2 {
+        position: sticky;
+        z-index: 1;
+        background: var(--white);
+    }
+
+    .ti-scroll .ti-pin {
+        left: 0;
+    }
+
+    .ti-scroll .ti-pin-2 {
+        left: 56px;
+        box-shadow: inset -1px 0 0 var(--slate-200), 6px 0 6px -6px rgba(15, 23, 42, 0.18);
+    }
+
+    /* Every pinned rule is written under .ti-scroll, so it outranks the cell's own rules (app.css's sticky head
+       included) whatever their order. */
+    .ti-scroll thead .ti-pin,
+    .ti-scroll thead .ti-pin-2 {
+        z-index: 3;
+        background: var(--slate-50);
+    }
+
+    .ti-scroll tbody tr:hover .ti-pin,
+    .ti-scroll tbody tr:hover .ti-pin-2 {
+        background: var(--slate-50);
+    }
+
+    /* The margin keeps its gold rule, and its mark, over the books sliding under it. */
+    .ti-scroll td.ti-pin {
+        z-index: 2;
+        box-shadow: inset -1px 0 0 var(--gold-rule);
+    }
+}
+
+/* A phone's width: the account would leave the books a sliver, so only the margin stays pinned. */
+@container (max-width: 640px) {
+    .ti-scroll .ti-pin-2 {
+        position: static;
+        box-shadow: none;
+    }
+
+    /* A head cell keeps the sticky position every head has (app.css), unpinned from the left. */
+    .ti-scroll thead .ti-pin-2 {
+        left: auto;
+    }
+}
+
+/* Two rows of heads: the books over their status and amount. The second row sticks under the first, which is 28px:
+   the book heads' 6px over an 18px line, 3px under it and their 1px rule (the other heads span both rows). */
+thead tr:first-child th {
+    top: 0;
+}
+
+thead tr:first-child th[rowspan] {
+    vertical-align: bottom;
+}
+
+.ti-group {
+    color: var(--brand-primary);
+    padding-bottom: 3px;
+    border-bottom-color: var(--slate-150);
+}
+
+.ti-head-2 th {
+    top: 28px;
+    padding-top: 3px;
+    padding-bottom: 4px;
+    font-size: var(--fs-micro);
+    font-weight: 500;
+    color: var(--slate-500);
+}
+
+    /* app.css draws the margin on a register's first head cell; in this row that is a book's, which reads left. */
+    .ti-head-2 th:first-child {
+        text-align: left;
+        box-shadow: none;
+    }
+
+    .ti-head-2 th.ti-stage {
+        display: table-cell;
+    }
+
+        .ti-head-2 th.ti-stage span:last-child {
+            float: right;
+        }
+
+/* Each book's entry opens on a rule, so a row reads as three entries side by side. */
+.ti-stage {
+    border-left: 1px solid var(--slate-150);
+}
+
+/* Centred, not baseline-aligned: the 12px status beside the 13px amount on a baseline would stand 21px tall and
+   grow the row past its 32px. */
+.ti-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ti-amt {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+    .ti-amt.is-off {
+        color: var(--red-primary);
+        font-weight: 600;
+    }
+
+.ti-row {
+    cursor: pointer;
+}
+
+/* The margin's mark, on the gold rule: tallied, needs attention, waiting. Drawn for the eye; the verdict says it. */
+.ti-mark {
+    position: absolute;
+    top: 50%;
+    right: -6.5px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-full);
+    background: var(--white);
+    font-size: 8.5px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+    .ti-mark.is-tallied {
+        color: var(--gold-primary);
+        font-size: 9.5px;
+    }
+
+    .ti-mark.is-attention {
+        color: var(--white);
+        background: var(--red-primary);
+        font-size: 7.5px;
+    }
+
+    .ti-mark.is-waiting {
+        width: 9px;
+        height: 9px;
+        right: -5px;
+        border: 1px dashed var(--slate-400);
+    }
+
+tbody tr:hover .ti-mark.is-tallied,
+tbody tr:hover .ti-mark.is-waiting {
+    background: var(--slate-50);
+}
+
+/* A payment's bills together: a dotted rule between them, a solid one between payments; the payment fades on the
+   rows after the first, a ledger's ditto. */
+tbody tr.continues td {
+    border-bottom-style: dotted;
+    border-bottom-color: var(--slate-200);
+}
+
+.is-ditto,
+.is-ditto .ti-sub {
+    color: var(--slate-400);
+}
+
+.ti-payment {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ti-sub {
+    margin-left: 6px;
+    font-size: 11.5px;
+    line-height: 15px;
+    color: var(--slate-500);
+}
+
+/* The account's number, then its consumer, truncated to the room the column has (the whole name in its title). */
+.ti-acct {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ti-acct-no {
+    flex-shrink: 0;
+    color: var(--slate-700);
+}
+
+.ti-name {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+    .ti-name.is-unknown {
+        font-weight: 400;
+        color: var(--slate-500);
+    }
+
+.ti-bill {
+    white-space: nowrap;
+    color: var(--slate-700);
+}
+
+/* A book's status: ink as it should be, amber waiting, red failed, slate never paid. */
+.ti-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    font-size: var(--fs-label);
+    font-weight: 500;
+    line-height: 19px;
+    white-space: nowrap;
+}
+
+.ti-state-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: currentColor;
+}
+
+.ti-state.is-ink { color: var(--slate-900); }
+.ti-state.is-wait { color: #B45309; }
+.ti-state.is-fail { color: var(--red-primary); }
+
+.ti-state.is-mute {
+    color: var(--slate-500);
+}
+
+    .ti-state.is-mute .ti-state-dot {
+        background: var(--slate-300);
+    }
+
+/* Pencil: the place a record should be, left empty and dashed. 15px in a 1px frame stays inside the row's 19px line. */
+.ti-pencil {
+    display: block;
+    margin-top: 1px;
+    padding: 0 6px;
+    border: 1px dashed var(--slate-300);
+    border-radius: var(--radius-sm);
+    font-size: 11.5px;
+    line-height: 15px;
+    color: var(--slate-500);
+    white-space: nowrap;
+    text-align: center;
+}
+
+.ti-verdict-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ti-verdict {
+    font-weight: 600;
+}
+
+    .ti-verdict.is-tallied { color: var(--green-600); }
+    .ti-verdict.is-waiting { color: #B45309; }
+    .ti-verdict.is-attention { color: var(--red-primary); }
+
+    .ti-verdict.is-unpaid {
+        font-weight: 500;
+        color: var(--slate-500);
+    }
+
+.ti-action {
+    text-align: right;
+    padding-left: 0;
+    padding-right: 8px;
+}
+
+/* Loading */
+.ti-skel {
+    display: block;
+    height: 10px;
+    margin: 4.5px 0;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, var(--slate-100) 0%, var(--slate-50) 50%, var(--slate-100) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+}
+
+    .ti-skel.w-30 { width: 30%; }
+    .ti-skel.w-70 { width: 70%; }
+    .ti-skel.w-90 { width: 90%; }
+
+.ti-skel-row {
+    cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ti-skel {
+        animation: none;
+    }
+}

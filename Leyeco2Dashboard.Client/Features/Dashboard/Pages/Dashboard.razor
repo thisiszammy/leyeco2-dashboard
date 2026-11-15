@@ -1,0 +1,597 @@
+@page "/"
+@attribute [Authorize(Policy = MonitorPolicies.ViewDashboard)]
+@namespace Leyeco2Dashboard.Client.Features.Dashboard.Pages
+@inherits DashboardPage<CollectionDashboard>
+@inject CollectionsApiClient Collections
+
+<PageTitle>Dashboard — Leyeco II</PageTitle>
+
+@* The overall dashboard: what the collections ledger records as paid, the source of truth for what was collected,
+   whichever channel took the payment. The ledger keeps a row per bill and nothing of which bills were paid
+   together, so every figure here counts bills (and accounts), never payments. A channel is read off the account
+   that posted the bill (CollectionChannelEnum in the data layer). Its registers are footed as a ledger foots
+   them: a rule over the figures, a double rule under the sum. *@
+<div class="coll-page @(Loading && Data is not null ? "is-reading" : null)" aria-busy="@(Loading ? "true" : "false")">
+    <div class="page-header-bar">
+        <div class="page-header" style="margin-bottom:0">
+            <h2>Dashboard</h2>
+            <p class="subtitle">Bills paid at the tellers, SBA and the payment partners, as the collections ledger records them.</p>
+        </div>
+        <div class="page-header-actions">
+            <PeriodPicker Id="coll-period" From="From" To="To" OnChange="ChangePeriodAsync" OnRefresh="LoadAsync"
+                          ReadAt="Data?.GeneratedOn" Busy="Loading" />
+        </div>
+    </div>
+
+    @if (LoadError is not null && Data is null)
+    {
+        <div class="page-error" role="alert">
+            <div class="icon-circle"><Icon Name="warning" /></div>
+            <h4>Couldn't read the collections</h4>
+            <p>@LoadError</p>
+            <button type="button" class="btn btn-secondary" @onclick="LoadAsync">
+                <Icon Name="replace" />
+                Try Again
+            </button>
+        </div>
+    }
+    else
+    {
+        @if (LoadError is not null && Data is not null)
+        {
+            <div class="coll-stale" role="status">
+                <Icon Name="warning" />
+                <span>Couldn't read the figures again: @LoadError These are the ones read at @Figures.Time(Data.GeneratedOn).</span>
+            </div>
+        }
+
+        <div class="kpi-strip">
+            <KpiCard Variant="KpiCard.KpiVariant.Accent"
+                     Label="Collected"
+                     Value="@(Data is null ? "—" : Figures.Peso(Data.Totals.Amount))"
+                     Sub="@(Data is null ? null : Figures.Change(Data.Totals.Amount, Data.Previous.Amount, Against))"
+                     IconName="pesoSign"
+                     IconTone="brand" />
+            <KpiCard Label="Bills paid"
+                     Value="@(Data is null ? "—" : Figures.Count(Data.Totals.Bills))"
+                     Sub="@(Data is null ? null : Figures.Change(Data.Totals.Bills, Data.Previous.Bills, Against))"
+                     IconName="receipt"
+                     IconTone="blue" />
+            <KpiCard Label="Accounts paid"
+                     Value="@(Data is null ? "—" : Figures.Count(Data.Totals.Accounts))"
+                     Sub="@(Data is null || Data.Totals.Accounts == 0 ? null : $"{Figures.Ratio(Data.Totals.Bills, Data.Totals.Accounts):0.00} bills each")"
+                     IconName="people"
+                     IconTone="green" />
+            <KpiCard Label="Average bill"
+                     Value="@(Data is null ? "—" : Figures.Peso(Math.Round(Figures.Ratio(Data.Totals.Amount, Data.Totals.Bills), 2)))"
+                     Sub="Collected ÷ bills paid"
+                     IconName="calculator"
+                     IconTone="gold" />
+            <KpiCard Label="Surcharges"
+                     Value="@(Data is null ? "—" : Figures.Peso(Data.Totals.Surcharge))"
+                     Sub="@(Data is null ? null : $"On {Figures.Plural(Data.Totals.SurchargedBills, "late bill", "late bills")}")"
+                     IconName="hourglass"
+                     IconTone="amber" />
+        </div>
+
+        <div class="coll-row">
+            <section class="panel" aria-labelledby="coll-trend-title">
+                <div class="panel-head">
+                    <div class="coll-head-text">
+                        <h3 class="panel-title" id="coll-trend-title">Collections</h3>
+                        <span class="panel-sub">@(ByHour ? "By the hour each payment was posted" : "By the day paid"), by channel</span>
+                    </div>
+                    <div class="coll-tools">
+                        <div class="toggle-group" role="group" aria-label="Group the collections">
+                            <button type="button" class="toggle-opt @(ByHour ? null : "active")" aria-pressed="@(ByHour ? "false" : "true")" @onclick="() => _byHour = false">By day</button>
+                            <button type="button" class="toggle-opt @(ByHour ? "active" : null)" aria-pressed="@(ByHour ? "true" : "false")" @onclick="() => _byHour = true">By hour</button>
+                        </div>
+                        <button type="button" class="btn btn-ghost btn-sm" aria-pressed="@(_table ? "true" : "false")" @onclick="() => _table = !_table">
+                            <Icon Name="@(_table ? "chart" : "tableCells")" />
+                            @(_table ? "Chart" : "Table")
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    @if (Data is null)
+                    {
+                        <div class="skeleton coll-chart-skeleton" aria-hidden="true"></div>
+                    }
+                    else if (Data.Totals.Bills == 0)
+                    {
+                        <div class="empty-state is-inset">
+                            <div class="icon-circle"><Icon Name="receipt" /></div>
+                            <h4>No bills paid in this period</h4>
+                            <p>The collections ledger holds no payments for @Figures.Period(Data.From, Data.To). Pick another period above.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <StackedColumns Series="Series"
+                                        Columns="TrendColumns"
+                                        ShowTable="_table"
+                                        SkipEmptyRows="ByHour"
+                                        AriaLabel="@($"Amount collected {(ByHour ? "by hour" : "by day")}, {Figures.Period(Data.From, Data.To)}")"
+                                        ColumnNoun="@(ByHour ? "hour" : "day")"
+                                        TableHead="@(ByHour ? "Hour" : "Day")"
+                                        ValueFormat="Figures.Peso"
+                                        AxisFormat="Figures.PesoCompact" />
+                        @if (ByHour && Data.UntimedBills > 0)
+                        {
+                            <p class="coll-note">@Figures.Plural(Data.UntimedBills, "bill has", "bills have") no posting time and aren't counted by the hour.</p>
+                        }
+                    }
+                </div>
+            </section>
+
+            <section class="panel" aria-labelledby="coll-channels-title">
+                <div class="panel-head">
+                    <div class="coll-head-text">
+                        <h3 class="panel-title" id="coll-channels-title">By channel</h3>
+                        <span class="panel-sub">Shares of the amount collected</span>
+                    </div>
+                </div>
+                <div class="panel-body coll-channels">
+                    @if (Data is null)
+                    {
+                        <div class="skeleton coll-split-skeleton" aria-hidden="true"></div>
+                        <div class="skeleton coll-rows-skeleton" aria-hidden="true"></div>
+                    }
+                    else
+                    {
+                        <SplitBar Label="Amount collected by channel" ValueFormat="Figures.Peso"
+                                  Parts="@(Data.Channels.Select(c => new SplitPart(c.Label, c.Amount, Channels.Color(c.Key), Channels.Ink(c.Key))).ToList())" />
+
+                        <table class="coll-ledger">
+                            <caption class="sr-only">Bills and amount collected by channel</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Channel</th>
+                                    <th scope="col" class="num">Bills</th>
+                                    <th scope="col" class="num">Amount</th>
+                                    <th scope="col" class="num">Share</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var channel in Data.Channels)
+                                {
+                                    <tr>
+                                        <th scope="row"><span class="swatch-dot" style="--swatch:@Channels.Color(channel.Key)" aria-hidden="true"></span> @channel.Label</th>
+                                        <td class="num">@Figures.Count(channel.Bills)</td>
+                                        <td class="num">@Figures.Peso(channel.Amount)</td>
+                                        <td class="num">@Figures.Share(channel.Amount, Data.Totals.Amount)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="ledger-foot">
+                                <tr>
+                                    <th scope="row">Total</th>
+                                    <td class="num">@Figures.Count(Data.Channels.Sum(c => c.Bills))</td>
+                                    <td class="num">@Figures.Peso(Data.Channels.Sum(c => c.Amount))</td>
+                                    <td class="num">@(Data.Totals.Amount > 0 ? "100.0%" : "—")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    }
+                </div>
+            </section>
+        </div>
+
+        @* By town: the town is the code each account number begins with. Towns take no colour of their own (the
+           series colours are the channels'); each row's bar is the town's channel mix, so reading down the column
+           compares how the towns pay. "By channel" is the same figures as a footed matrix: the bars' table. *@
+        <section class="panel coll-towns" aria-labelledby="coll-towns-title">
+            <div class="panel-head">
+                <div class="coll-head-text">
+                    <h3 class="panel-title" id="coll-towns-title">By town</h3>
+                    <span class="panel-sub">By the town code each account number begins with</span>
+                </div>
+                <div class="coll-tools">
+                    <div class="toggle-group" role="group" aria-label="Show the towns">
+                        <button type="button" class="toggle-opt @(_townsByChannel ? null : "active")" aria-pressed="@(_townsByChannel ? "false" : "true")" @onclick="() => _townsByChannel = false">Summary</button>
+                        <button type="button" class="toggle-opt @(_townsByChannel ? "active" : null)" aria-pressed="@(_townsByChannel ? "true" : "false")" @onclick="() => _townsByChannel = true">By channel</button>
+                    </div>
+                </div>
+            </div>
+            @if (Data is null)
+            {
+                <div class="panel-body"><div class="skeleton coll-rows-skeleton" aria-hidden="true"></div></div>
+            }
+            else
+            {
+                <div class="coll-towns-scroll">
+                    @if (!_townsByChannel)
+                    {
+                        <table class="coll-town-ledger">
+                            <caption class="sr-only">Accounts, bills and amount collected by town, the change in the amount @ChangeHead, and the channels each town's bills were paid through</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Town</th>
+                                    <th scope="col" class="num">Accounts</th>
+                                    <th scope="col" class="num">Bills</th>
+                                    <th scope="col" class="num">Amount</th>
+                                    <th scope="col" class="num">Share</th>
+                                    <th scope="col" class="num" title="The change in the amount collected">@ChangeHead</th>
+                                    <th scope="col" class="coll-mix-col">Paid through</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var town in Data.Towns)
+                                {
+                                    <tr>
+                                        <th scope="row">@TownName(town)</th>
+                                        <td class="num">@Figures.Count(town.Totals.Accounts)</td>
+                                        <td class="num">@Figures.Count(town.Totals.Bills)</td>
+                                        <td class="num">@Figures.Peso(town.Totals.Amount)</td>
+                                        <td class="num">@Figures.Share(town.Totals.Amount, Data.Totals.Amount)</td>
+                                        <td class="num">@Figures.ChangeBrief(town.Totals.Amount, town.Previous.Amount)</td>
+                                        <td class="coll-mix-col">
+                                            <SplitBar Compact="true" MinLabelShare="18m" ValueFormat="Figures.Peso"
+                                                      Label="@($"{town.Label}, amount collected by channel")"
+                                                      Parts="@MixOf(town.Amounts)" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="ledger-foot">
+                                <tr>
+                                    <th scope="row">@TownName(null)</th>
+                                    <td class="num">@Figures.Count(Data.Towns.Sum(t => t.Totals.Accounts))</td>
+                                    <td class="num">@Figures.Count(Data.Towns.Sum(t => t.Totals.Bills))</td>
+                                    <td class="num">@Figures.Peso(Data.Towns.Sum(t => t.Totals.Amount))</td>
+                                    <td class="num">@(Data.Totals.Amount > 0 ? "100.0%" : "—")</td>
+                                    <td class="num">@Figures.ChangeBrief(Data.Towns.Sum(t => t.Totals.Amount), Data.Towns.Sum(t => t.Previous.Amount))</td>
+                                    <td class="coll-mix-col">
+                                        <SplitBar Compact="true" MinLabelShare="18m" ValueFormat="Figures.Peso"
+                                                  Label="All towns, amount collected by channel"
+                                                  Parts="@MixOf(Data.Channels.Select(c => c.Amount).ToArray())" />
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    }
+                    else
+                    {
+                        <table class="coll-town-ledger is-matrix">
+                            <caption class="sr-only">Amount collected by town and channel</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Town</th>
+                                    @foreach (var channel in Data.Channels)
+                                    {
+                                        <th scope="col" class="num"><span class="coll-th-key"><span class="swatch-dot" style="--swatch:@Channels.Color(channel.Key)" aria-hidden="true"></span>@channel.Label</span></th>
+                                    }
+                                    <th scope="col" class="num coll-matrix-total">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var town in Data.Towns)
+                                {
+                                    <tr>
+                                        <th scope="row">@TownName(town)</th>
+                                        @for (var i = 0; i < Data.Channels.Count; i++)
+                                        {
+                                            var bills = i < town.Bills.Length ? town.Bills[i] : 0;
+                                            <td class="num" title="@(bills > 0 ? Figures.Plural(bills, "bill", "bills") : null)">@Nil(i < town.Amounts.Length ? town.Amounts[i] : 0)</td>
+                                        }
+                                        <td class="num coll-matrix-total">@Nil(town.Amounts.Sum())</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="ledger-foot">
+                                <tr>
+                                    <th scope="row">@TownName(null)</th>
+                                    @for (var i = 0; i < Data.Channels.Count; i++)
+                                    {
+                                        var index = i;
+                                        <td class="num">@Nil(Data.Towns.Sum(t => index < t.Amounts.Length ? t.Amounts[index] : 0))</td>
+                                    }
+                                    <td class="num coll-matrix-total">@Nil(Data.Towns.Sum(t => t.Amounts.Sum()))</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    }
+                </div>
+                <div class="coll-towns-foot">
+                    <p class="coll-note">Others counts the accounts whose numbers begin with a code other than 01, 02 or 03.</p>
+                    @if (!_townsByChannel)
+                    {
+                        <ul class="coll-key" aria-hidden="true">
+                            @foreach (var channel in Data.Channels)
+                            {
+                                <li><span class="swatch-dot" style="--swatch:@Channels.Color(channel.Key)"></span>@channel.Label</li>
+                            }
+                        </ul>
+                    }
+                </div>
+            }
+        </section>
+
+        <div class="coll-row is-loose">
+            <section class="panel coll-collectors" aria-labelledby="coll-collectors-title">
+                <div class="panel-head">
+                    <div class="coll-head-text">
+                        <h3 class="panel-title" id="coll-collectors-title">Collectors</h3>
+                        <span class="panel-sub">Every account that posted payments, the largest amount first</span>
+                    </div>
+                </div>
+                @if (Data is null)
+                {
+                    <div class="panel-body"><div class="skeleton coll-rows-skeleton is-tall" aria-hidden="true"></div></div>
+                }
+                else if (Data.Collectors.Count == 0)
+                {
+                    <div class="empty-state is-inset">
+                        <p>No account posted a payment in this period.</p>
+                    </div>
+                }
+                else
+                {
+                    var leader = Data.Collectors.Max(c => c.Amount);
+                    <div class="coll-register">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:48px">#</th>
+                                    <th>Collector</th>
+                                    <th>Channel</th>
+                                    <th class="num">Bills</th>
+                                    <th class="num">Amount</th>
+                                    <th class="num coll-share-col">Share</th>
+                                    <th class="num">Last posted</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var (collector, index) in VisibleCollectors.Select((c, i) => (c, i)))
+                                {
+                                    <tr>
+                                        <td class="row-num">@(index + 1)</td>
+                                        <td>
+                                            <span class="coll-collector">
+                                                <span class="coll-code">
+                                                    @if (collector.CollectorId is not null)
+                                                    {
+                                                        <span class="card-badge badge-gray t-code" title="Collector code">@collector.CollectorId</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="card-badge t-code is-none" title="No collector code on this account's bills" aria-hidden="true">--</span>
+                                                        <span class="sr-only">No code</span>
+                                                    }
+                                                </span>
+                                                <span class="truncate" title="@collector.Username">@(collector.Username.Length == 0 ? "(no username)" : collector.Username)</span>
+                                            </span>
+                                        </td>
+                                        <td><span class="coll-channel"><span class="swatch-dot" style="--swatch:@Channels.Color(collector.Channel)" aria-hidden="true"></span>@ChannelLabel(collector.Channel)</span></td>
+                                        <td class="num">@Figures.Count(collector.Bills)</td>
+                                        <td class="num">@Figures.Peso(collector.Amount)</td>
+                                        <td class="num coll-share-col">
+                                            <span class="coll-share">
+                                                <span class="coll-meter" aria-hidden="true"><i style="width:@ChartPercent(collector.Amount, leader)%;background:@Channels.Color(collector.Channel)"></i></span>
+                                                @Figures.Share(collector.Amount, Data.Totals.Amount)
+                                            </span>
+                                        </td>
+                                        <td class="num">@LastPosted(collector.LastPostedOn)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <div class="table-footer">
+                            <span>Showing @Figures.Count(VisibleCollectors.Count()) of @Figures.Plural(Data.Collectors.Count, "collector", "collectors")</span>
+                            @if (Data.Collectors.Count > CollectorsShown)
+                            {
+                                <button type="button" class="btn btn-ghost btn-sm" aria-expanded="@(_allCollectors ? "true" : "false")" @onclick="() => _allCollectors = !_allCollectors">
+                                    <Icon Name="@(_allCollectors ? "collapseAll" : "expandAll")" />
+                                    @(_allCollectors ? $"Show the first {CollectorsShown}" : "Show all")
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+            </section>
+
+            <section class="panel" aria-labelledby="coll-last-title">
+                <div class="panel-head">
+                    <div class="coll-head-text">
+                        <h3 class="panel-title" id="coll-last-title">Last posted</h3>
+                        <span class="panel-sub">@(Data?.IncludesToday == true ? "When each channel last posted a payment" : "Each channel's last posting in the period")</span>
+                    </div>
+                </div>
+                @if (Data is null)
+                {
+                    <div class="panel-body"><div class="skeleton coll-rows-skeleton" aria-hidden="true"></div></div>
+                }
+                else
+                {
+                    <ul class="coll-last">
+                        @foreach (var channel in Data.Channels)
+                        {
+                            var state = PostingState(channel);
+                            <li>
+                                <span class="coll-last-name"><span class="swatch-dot" style="--swatch:@Channels.Color(channel.Key)" aria-hidden="true"></span>@channel.Label</span>
+                                @if (channel.LastPostedOn is DateTime last)
+                                {
+                                    <span class="coll-last-when">
+                                        @(last.Date == Data.GeneratedOn.Date ? Figures.Time(last) : $"{Figures.Day(last)}, {Figures.Time(last)}")
+                                        @if (state.Ago is not null)
+                                        {
+                                            <small>@state.Ago</small>
+                                        }
+                                    </span>
+                                    @if (state.Label is not null)
+                                    {
+                                        <span class="status @state.Css" title="@state.Title"><span class="status-dot"></span>@state.Label</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="coll-last-when is-none">Nothing posted</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                    @if (Data.IncludesToday)
+                    {
+                        <p class="coll-note coll-last-note">A channel is marked quiet when it has posted nothing for an hour while another posted in the last 15 minutes.</p>
+                    }
+                }
+            </section>
+        </div>
+    }
+</div>
+
+@code {
+    private const int CollectorsShown = 12;
+
+    // The By day / By hour choice: unset follows the period (a single day reads by the hour).
+    private bool? _byHour;
+    private bool _table;
+    private bool _allCollectors;
+    private bool _townsByChannel;
+
+    protected override string PagePath => "/";
+
+    protected override Task<CollectionDashboard> ReadAsync(DateTime from, DateTime to, CancellationToken ct)
+        => Collections.GetAsync(from, to, ct);
+
+    protected override bool IsLive(CollectionDashboard data) => data.IncludesToday;
+
+    protected override void OnPeriodChanged()
+    {
+        _byHour = null;
+        _allCollectors = false;
+    }
+
+    private bool ByHour => _byHour ?? From == To;
+
+    private IReadOnlyList<ChartSeries> Series => Data?.Channels.Select(Channels.Series).ToList() ?? [];
+
+    private string Against
+    {
+        get
+        {
+            if (Data is null)
+                return string.Empty;
+            if (Data.Days > 1)
+                return $"the {Data.Days} days before";
+            return Data.From == DateTime.Today ? "yesterday" : "the day before";
+        }
+    }
+
+    /// <summary>The towns' change column's head: what each change is against.</summary>
+    private string ChangeHead
+    {
+        get
+        {
+            if (Data is null)
+                return "Change";
+            if (Data.Days > 1)
+                return $"vs. {Data.Days} days before";
+            return Data.From == DateTime.Today ? "vs. yesterday" : "vs. the day before";
+        }
+    }
+
+    /// <summary>A town's row head, ledger style: its code in a slot of its own, so the names line up; null is the total.</summary>
+    private static RenderFragment TownName(CollectionTown? town) => __builder =>
+    {
+        <span class="coll-town">
+            <span class="coll-code">
+                @if (town?.Code is string townCode)
+                {
+                    <span class="card-badge badge-gray t-code" title="Account numbers beginning @townCode">@townCode</span>
+                }
+            </span>
+            @(town?.Label ?? "Total")
+        </span>
+    };
+
+    /// <summary>A whole split by channel, for a <see cref="SplitBar"/>: the amounts follow <c>Data.Channels</c>.</summary>
+    private IReadOnlyList<SplitPart> MixOf(IReadOnlyList<decimal> amounts)
+        => Data is null
+            ? []
+            : Data.Channels
+                .Select((channel, index) => new SplitPart(channel.Label, index < amounts.Count ? amounts[index] : 0,
+                    Channels.Color(channel.Key), Channels.Ink(channel.Key)))
+                .ToList();
+
+    /// <summary>A ledger's nil: a dash for nothing, so the figures that are there stand out.</summary>
+    private static string Nil(decimal amount) => amount == 0 ? "—" : Figures.Peso(amount);
+
+    private IEnumerable<Collector> VisibleCollectors
+        => Data is null ? [] : _allCollectors ? Data.Collectors : Data.Collectors.Take(CollectorsShown);
+
+    private IReadOnlyList<ChartColumn> TrendColumns
+    {
+        get
+        {
+            if (Data is null)
+                return [];
+
+            if (ByHour)
+            {
+                return Data.Hourly
+                    .Select(point => new ChartColumn(
+                        Figures.HourSpan(point.Hour ?? 0),
+                        point.Hour % 3 == 0 ? Figures.Hour(point.Hour ?? 0) : null,
+                        point.Amounts,
+                        RowTitle: Figures.Hour(point.Hour ?? 0),
+                        MinorLabel: point.Hour % 6 != 0))
+                    .ToList();
+            }
+
+            var step = Math.Max(1, (int)Math.Ceiling(Data.Daily.Count / 12d));
+            return Data.Daily
+                .Select((point, index) =>
+                {
+                    var date = point.Date ?? Data.From;
+                    string? label = null;
+                    if (Data.Daily.Count <= 7)
+                        label = date.ToString("ddd d", System.Globalization.CultureInfo.InvariantCulture);
+                    else if (index % step == 0)
+                        label = index == 0 || date.Day <= step ? Figures.Day(date) : date.Day.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+                    return new ChartColumn(Figures.DayLong(date), label, point.Amounts, Quiet: date.DayOfWeek == DayOfWeek.Sunday,
+                        RowTitle: date.ToString("ddd, MMM d", System.Globalization.CultureInfo.InvariantCulture),
+                        MinorLabel: label is not null && index / step % 2 == 1);
+                })
+                .ToList();
+        }
+    }
+
+    private string ChannelLabel(string key) => Data?.Channels.FirstOrDefault(c => c.Key == key)?.Label ?? key;
+
+    private static string ChartPercent(decimal value, decimal max)
+        => (max <= 0 ? 0 : Math.Round(value / max * 100m, 1)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private string LastPosted(DateTime? posted)
+    {
+        if (posted is not DateTime time)
+            return "—";
+        return Data is not null && Data.Days == 1 ? Figures.Time(time) : $"{Figures.Day(time)}, {Figures.Time(time)}";
+    }
+
+    private sealed record Posting(string? Label, string? Css, string? Title, string? Ago);
+
+    // Measured against the moment the ledger was read (the API's clock, the one the postings were stamped by),
+    // not this browser's. Only a period that includes today says anything about now.
+    private Posting PostingState(CollectionChannel channel)
+    {
+        if (Data is null || !Data.IncludesToday || channel.LastPostedOn is not DateTime last || last.Date != Data.GeneratedOn.Date)
+            return new(null, null, null, null);
+
+        var now = Data.GeneratedOn;
+        var elapsed = now - last;
+        var ago = Figures.Ago(elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed);
+
+        if (elapsed <= TimeSpan.FromMinutes(15))
+            return new("Posting", "status-active", "Posted a payment in the last 15 minutes", ago);
+
+        var othersPosting = Data.Channels.Any(other => other.Key != channel.Key
+            && other.LastPostedOn is DateTime theirs
+            && now - theirs <= TimeSpan.FromMinutes(15));
+
+        return elapsed >= TimeSpan.FromHours(1) && othersPosting
+            ? new("Quiet", "status-leave", "Nothing posted for an hour or more while other channels are posting", ago)
+            : new(null, null, null, ago);
+    }
+}

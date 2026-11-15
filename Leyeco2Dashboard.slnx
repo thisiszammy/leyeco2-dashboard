@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Leyeco2Dashboard.App/Leyeco2Dashboard.App.csproj" />
+  <Project Path="Leyeco2Dashboard.Client/Leyeco2Dashboard.Client.csproj" />
+  <Project Path="Leyeco2Dashboard.Data/Leyeco2Dashboard.Data.csproj" />
+  <Project Path="Leyeco2Dashboard.Services/Leyeco2Dashboard.Services.csproj" />
+</Solution>

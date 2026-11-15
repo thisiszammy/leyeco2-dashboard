@@ -1,0 +1,389 @@
+@page "/online-payments"
+@attribute [Authorize(Policy = MonitorPolicies.ViewOnlinePayments)]
+@namespace Leyeco2Dashboard.Client.Features.OnlinePayments.Pages
+@inherits DashboardPage<OnlinePaymentDashboard>
+@inject OnlinePaymentsApiClient OnlinePaymentsApi
+
+<PageTitle>Online Payments — Leyeco II</PageTitle>
+
+@* The payments made through the online payment facility (Leyeco2OTF). A payment is a transaction, and one
+   transaction can settle several bills (its rows share a TransactionId), so the figures count both: payments,
+   each once, and the bills they settled. Below the figures, reconciliation, still in pencil. *@
+<div class="otf-page @(Loading && Data is not null ? "is-reading" : null)" aria-busy="@(Loading ? "true" : "false")">
+    <div class="page-header-bar">
+        <div class="page-header" style="margin-bottom:0">
+            <h2>Online Payments</h2>
+            <p class="subtitle">Payments made through the online payment facility. One payment can settle several bills.</p>
+        </div>
+        <div class="page-header-actions">
+            <PeriodPicker Id="otf-period" From="From" To="To" OnChange="ChangePeriodAsync" OnRefresh="LoadAsync"
+                          ReadAt="Data?.GeneratedOn" Busy="Loading" />
+        </div>
+    </div>
+
+    @if (LoadError is not null && Data is null)
+    {
+        <div class="page-error otf-error" role="alert">
+            <div class="icon-circle"><Icon Name="warning" /></div>
+            <h4>Couldn't read the online payments</h4>
+            <p>@LoadError</p>
+            <button type="button" class="btn btn-secondary" @onclick="LoadAsync">
+                <Icon Name="replace" />
+                Try Again
+            </button>
+        </div>
+    }
+    else
+    {
+        @if (LoadError is not null && Data is not null)
+        {
+            <div class="otf-stale" role="status">
+                <Icon Name="warning" />
+                <span>Couldn't read the figures again: @LoadError These are the ones read at @Figures.Time(Data.GeneratedOn).</span>
+            </div>
+        }
+
+        <div class="kpi-strip">
+            <KpiCard Variant="KpiCard.KpiVariant.Accent"
+                     Label="Paid online"
+                     Value="@(Data is null ? "—" : Figures.Peso(Data.Successful.Amount))"
+                     Sub="@(Data is null ? null : Figures.Change(Data.Successful.Amount, Data.PreviousSuccessful.Amount, Against))"
+                     IconName="creditCard"
+                     IconTone="brand" />
+            <KpiCard Label="Payments"
+                     Value="@(Data is null ? "—" : Figures.Count(Data.Successful.Transactions))"
+                     Sub="@(Data is null ? null : $"{Figures.Plural(Data.Successful.Bills, "bill", "bills")} settled")"
+                     IconName="receipt"
+                     IconTone="blue" />
+            <KpiCard Label="Success rate"
+                     Value="@(Data is null ? "—" : Figures.Share(Data.Successful.Transactions, Data.Attempted))"
+                     Sub="@(Data is null ? null : $"Of {Figures.Plural(Data.Attempted, "payment", "payments")} begun")"
+                     IconName="circleCheck"
+                     IconTone="green" />
+            <KpiCard Label="Pending"
+                     Value="@(Data is null ? "—" : Figures.Count(OutcomeOf("pending")?.Transactions ?? 0))"
+                     Sub="Waiting on the provider's answer"
+                     IconName="hourglass"
+                     IconTone="amber" />
+            <KpiCard Label="Failed or cancelled"
+                     Value="@(Data is null ? "—" : Figures.Count(OutcomeOf("failed")?.Transactions ?? 0))"
+                     Sub="@(Data is null ? null : $"And {Figures.Count(OutcomeOf("dropped")?.Transactions ?? 0)} dropped")"
+                     IconName="ban"
+                     IconTone="red" />
+        </div>
+
+        <div class="otf-row">
+            <section class="panel" aria-labelledby="otf-trend-title">
+                <div class="panel-head">
+                    <div class="otf-head-text">
+                        <h3 class="panel-title" id="otf-trend-title">@(_outcomes ? "Payments begun" : "Paid online")</h3>
+                        <span class="panel-sub">@(_outcomes ? "Payments by outcome" : "Amount by provider"), @(ByHour ? "by the hour made" : "by the day made")</span>
+                    </div>
+                    <div class="otf-tools">
+                        <div class="toggle-group" role="group" aria-label="What the chart shows">
+                            <button type="button" class="toggle-opt @(_outcomes ? null : "active")" aria-pressed="@(_outcomes ? "false" : "true")" @onclick="() => _outcomes = false">Amount</button>
+                            <button type="button" class="toggle-opt @(_outcomes ? "active" : null)" aria-pressed="@(_outcomes ? "true" : "false")" @onclick="() => _outcomes = true">Outcomes</button>
+                        </div>
+                        <div class="toggle-group" role="group" aria-label="Group the payments">
+                            <button type="button" class="toggle-opt @(ByHour ? null : "active")" aria-pressed="@(ByHour ? "false" : "true")" @onclick="() => _byHour = false">By day</button>
+                            <button type="button" class="toggle-opt @(ByHour ? "active" : null)" aria-pressed="@(ByHour ? "true" : "false")" @onclick="() => _byHour = true">By hour</button>
+                        </div>
+                        <button type="button" class="btn btn-ghost btn-sm" aria-pressed="@(_table ? "true" : "false")" @onclick="() => _table = !_table">
+                            <Icon Name="@(_table ? "chart" : "tableCells")" />
+                            @(_table ? "Chart" : "Table")
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    @if (Data is null)
+                    {
+                        <div class="skeleton otf-chart-skeleton" aria-hidden="true"></div>
+                    }
+                    else if (Data.Attempted == 0)
+                    {
+                        <div class="empty-state is-inset">
+                            <div class="icon-circle"><Icon Name="creditCard" /></div>
+                            <h4>No online payments in this period</h4>
+                            <p>The online payment facility holds no payments begun on @Figures.Period(Data.From, Data.To). Pick another period above.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <StackedColumns Series="TrendSeries"
+                                        Columns="TrendColumns"
+                                        ShowTable="_table"
+                                        SkipEmptyRows="ByHour"
+                                        WholeNumbers="_outcomes"
+                                        AriaLabel="@($"{(_outcomes ? "Payments begun by outcome" : "Amount paid online by provider")} {(ByHour ? "by hour" : "by day")}, {Figures.Period(Data.From, Data.To)}")"
+                                        ColumnNoun="@(ByHour ? "hour" : "day")"
+                                        TableHead="@(ByHour ? "Hour" : "Day")"
+                                        ValueFormat="@(_outcomes ? CountFormat : Figures.Peso)"
+                                        AxisFormat="@(_outcomes ? Figures.Compact : Figures.PesoCompact)" />
+                    }
+                </div>
+            </section>
+
+            <section class="panel" aria-labelledby="otf-providers-title">
+                <div class="panel-head">
+                    <div class="otf-head-text">
+                        <h3 class="panel-title" id="otf-providers-title">By provider</h3>
+                        <span class="panel-sub">Successful payments; shares of the amount</span>
+                    </div>
+                </div>
+                <div class="panel-body otf-stack">
+                    @if (Data is null)
+                    {
+                        <div class="skeleton otf-split-skeleton" aria-hidden="true"></div>
+                        <div class="skeleton otf-rows-skeleton" aria-hidden="true"></div>
+                    }
+                    else
+                    {
+                        var tones = OnlinePaymentTones.Providers(Data.Providers);
+                        <SplitBar Label="Amount paid online by provider" ValueFormat="Figures.Peso"
+                                  Parts="@(Data.Providers.Select(p => new SplitPart(p.Label, p.Amount, tones[p.Key].Color, tones[p.Key].Ink)).ToList())" />
+
+                        <table class="otf-ledger">
+                            <caption class="sr-only">Successful payments, bills and amount by provider</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Provider</th>
+                                    <th scope="col" class="num">Payments</th>
+                                    <th scope="col" class="num">Bills</th>
+                                    <th scope="col" class="num">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var provider in Data.Providers)
+                                {
+                                    <tr>
+                                        <th scope="row" title="@($"{Figures.Share(provider.Amount, Data.Successful.Amount)} of the amount; {Figures.Plural(provider.Attempted, "payment", "payments")} begun")">
+                                            <span class="swatch-dot" style="--swatch:@tones[provider.Key].Color" aria-hidden="true"></span> @provider.Label
+                                        </th>
+                                        <td class="num">@Figures.Count(provider.Transactions)</td>
+                                        <td class="num">@Figures.Count(provider.Bills)</td>
+                                        <td class="num">@Figures.Peso(provider.Amount)</td>
+                                    </tr>
+                                }
+                                @if (Data.Providers.Count == 0)
+                                {
+                                    <tr><td colspan="4" class="otf-none">No provider carried a payment in this period.</td></tr>
+                                }
+                            </tbody>
+                            <tfoot class="ledger-foot">
+                                <tr>
+                                    <th scope="row">Total</th>
+                                    <td class="num">@Figures.Count(Data.Successful.Transactions)</td>
+                                    <td class="num">@Figures.Count(Data.Successful.Bills)</td>
+                                    <td class="num">@Figures.Peso(Data.Successful.Amount)</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    }
+                </div>
+            </section>
+        </div>
+
+        <div class="otf-row is-even">
+            <section class="panel" aria-labelledby="otf-outcomes-title">
+                <div class="panel-head">
+                    <div class="otf-head-text">
+                        <h3 class="panel-title" id="otf-outcomes-title">Outcomes</h3>
+                        <span class="panel-sub">How each payment begun ended</span>
+                    </div>
+                </div>
+                <div class="panel-body otf-stack">
+                    @if (Data is null)
+                    {
+                        <div class="skeleton otf-split-skeleton" aria-hidden="true"></div>
+                        <div class="skeleton otf-rows-skeleton" aria-hidden="true"></div>
+                    }
+                    else
+                    {
+                        <SplitBar Label="Payments begun by outcome" ValueFormat="CountFormat"
+                                  Parts="@(Data.Outcomes.Select(o => { var tone = OnlinePaymentTones.Outcome(o); return new SplitPart(o.Label, o.Transactions, tone.Color, tone.Ink); }).ToList())" />
+
+                        <table class="otf-ledger">
+                            <caption class="sr-only">Payments, bills and amount by outcome</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Outcome</th>
+                                    <th scope="col" class="num">Payments</th>
+                                    <th scope="col" class="num">Bills</th>
+                                    <th scope="col" class="num">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var outcome in Data.Outcomes)
+                                {
+                                    <tr>
+                                        <th scope="row"><span class="swatch-dot" style="--swatch:@OnlinePaymentTones.Outcome(outcome).Color" aria-hidden="true"></span> @outcome.Label</th>
+                                        <td class="num">@Figures.Count(outcome.Transactions)</td>
+                                        <td class="num">@Figures.Count(outcome.Bills)</td>
+                                        <td class="num">@Figures.Peso(outcome.Amount)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="ledger-foot">
+                                <tr>
+                                    <th scope="row">Begun</th>
+                                    <td class="num">@Figures.Count(Data.Attempted)</td>
+                                    <td class="num">@Figures.Count(Data.Outcomes.Sum(o => o.Bills))</td>
+                                    <td class="num">@Figures.Peso(Data.Outcomes.Sum(o => o.Amount))</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <p class="otf-note">An amount still pending, failed or dropped was asked for, not paid.</p>
+                    }
+                </div>
+            </section>
+
+            <section class="panel" aria-labelledby="otf-bills-title">
+                <div class="panel-head">
+                    <div class="otf-head-text">
+                        <h3 class="panel-title" id="otf-bills-title">Bills per payment</h3>
+                        <span class="panel-sub">@(Data is null || Data.Successful.Transactions == 0 ? "How many bills each successful payment settled" : $"{Figures.Ratio(Data.Successful.Bills, Data.Successful.Transactions):0.00} bills a payment on average")</span>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    @if (Data is null)
+                    {
+                        <div class="skeleton otf-rows-skeleton" aria-hidden="true"></div>
+                    }
+                    else
+                    {
+                        var most = Math.Max(1, Data.BillsPerTransaction.Max(b => b.Transactions));
+                        <table class="otf-ledger otf-bands">
+                            <caption class="sr-only">Successful payments by how many bills each settled</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Settled</th>
+                                    <th scope="col" class="otf-band-cell"><span class="sr-only">Share of the payments, drawn</span></th>
+                                    <th scope="col" class="num">Payments</th>
+                                    <th scope="col" class="num">Share</th>
+                                    <th scope="col" class="num">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var band in Data.BillsPerTransaction)
+                                {
+                                    <tr>
+                                        <th scope="row">@(band.Bills >= 4 ? "4 bills or more" : Figures.Plural(band.Bills, "bill", "bills"))</th>
+                                        <td class="otf-band-cell" aria-hidden="true">
+                                            <span class="otf-band"><i style="width:@BandWidth(band.Transactions, most)%"></i></span>
+                                        </td>
+                                        <td class="num">@Figures.Count(band.Transactions)</td>
+                                        <td class="num">@Figures.Share(band.Transactions, Data.Successful.Transactions)</td>
+                                        <td class="num">@Figures.Peso(band.Amount)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="ledger-foot">
+                                <tr>
+                                    <th scope="row">Total</th>
+                                    <td class="otf-band-cell"></td>
+                                    <td class="num">@Figures.Count(Data.Successful.Transactions)</td>
+                                    <td class="num">@(Data.Successful.Transactions > 0 ? "100.0%" : "—")</td>
+                                    <td class="num">@Figures.Peso(Data.Successful.Amount)</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <p class="otf-note">Only the online facility records which bills were paid together; the collections ledger keeps each bill on its own.</p>
+                    }
+                </div>
+            </section>
+        </div>
+
+        <ReconciliationPlan />
+    }
+</div>
+
+@code {
+    private bool? _byHour;
+    private bool _outcomes;
+    private bool _table;
+
+    private static readonly Func<decimal, string> CountFormat = Figures.Count;
+
+    protected override string PagePath => "/online-payments";
+
+    protected override Task<OnlinePaymentDashboard> ReadAsync(DateTime from, DateTime to, CancellationToken ct)
+        => OnlinePaymentsApi.GetAsync(from, to, ct);
+
+    protected override bool IsLive(OnlinePaymentDashboard data) => data.IncludesToday;
+
+    protected override void OnPeriodChanged() => _byHour = null;
+
+    private bool ByHour => _byHour ?? From == To;
+
+    private string Against
+    {
+        get
+        {
+            if (Data is null)
+                return string.Empty;
+            if (Data.Days > 1)
+                return $"the {Data.Days} days before";
+            return Data.From == DateTime.Today ? "yesterday" : "the day before";
+        }
+    }
+
+    private OnlinePaymentOutcome? OutcomeOf(string key) => Data?.Outcomes.FirstOrDefault(outcome => outcome.Key == key);
+
+    private IReadOnlyList<ChartSeries> TrendSeries
+    {
+        get
+        {
+            if (Data is null)
+                return [];
+            if (_outcomes)
+                return Data.Outcomes.Select(OnlinePaymentTones.Outcome).ToList();
+
+            var tones = OnlinePaymentTones.Providers(Data.Providers);
+            return Data.Providers.Select(provider => tones[provider.Key]).ToList();
+        }
+    }
+
+    private IReadOnlyList<ChartColumn> TrendColumns
+    {
+        get
+        {
+            if (Data is null)
+                return [];
+
+            IReadOnlyList<decimal> Values(OnlinePaymentPoint point)
+                => _outcomes ? point.Transactions.Select(count => (decimal)count).ToList() : point.Amounts;
+
+            if (ByHour)
+            {
+                return Data.Hourly
+                    .Select(point => new ChartColumn(
+                        Figures.HourSpan(point.Hour ?? 0),
+                        point.Hour % 3 == 0 ? Figures.Hour(point.Hour ?? 0) : null,
+                        Values(point),
+                        RowTitle: Figures.Hour(point.Hour ?? 0),
+                        MinorLabel: point.Hour % 6 != 0))
+                    .ToList();
+            }
+
+            var step = Math.Max(1, (int)Math.Ceiling(Data.Daily.Count / 12d));
+            return Data.Daily
+                .Select((point, index) =>
+                {
+                    var date = point.Date ?? Data.From;
+                    string? label = null;
+                    if (Data.Daily.Count <= 7)
+                        label = date.ToString("ddd d", System.Globalization.CultureInfo.InvariantCulture);
+                    else if (index % step == 0)
+                        label = index == 0 || date.Day <= step ? Figures.Day(date) : date.Day.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+                    return new ChartColumn(Figures.DayLong(date), label, Values(point), Quiet: date.DayOfWeek == DayOfWeek.Sunday,
+                        RowTitle: date.ToString("ddd, MMM d", System.Globalization.CultureInfo.InvariantCulture),
+                        MinorLabel: label is not null && index / step % 2 == 1);
+                })
+                .ToList();
+        }
+    }
+
+    private static string BandWidth(int value, int most)
+        => Math.Round((decimal)value / most * 100m, 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+}

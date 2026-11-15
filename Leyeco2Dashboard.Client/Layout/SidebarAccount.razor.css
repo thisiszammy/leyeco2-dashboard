@@ -1,0 +1,112 @@
+/* SidebarAccount — signed-in account row at the foot of the sidebar. */
+.account {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.account-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    color: var(--brand-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: var(--font-heading);
+    font-size: var(--fs-micro);
+    font-weight: 700;
+}
+
+.account-meta {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.account-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--slate-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.account-handle {
+    font-size: var(--fs-micro);
+    color: var(--slate-500);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The account's two actions, side by side and close, so the name keeps its room. */
+.account-actions {
+    display: flex;
+    flex-shrink: 0;
+}
+
+.account-btn {
+    width: 24px;
+    height: 26px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--slate-500);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease-out-quart),
+                color var(--t-fast) var(--ease-out-quart);
+}
+
+    .account-btn:hover {
+        background: var(--brand-light);
+        color: var(--brand-primary);
+    }
+
+    /* Signing out leaves the session behind: the one action here that warns. */
+    .account-btn.account-signout:hover {
+        background: var(--red-light);
+        color: var(--red-primary);
+    }
+
+    .account-btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--brand-glow);
+    }
+
+/* Rail: initials over the two buttons; the name stays for screen readers. */
+.account.is-rail {
+    flex: none;
+    flex-direction: column;
+    gap: 6px;
+}
+
+    .account.is-rail .account-actions {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .account.is-rail .account-btn {
+        width: 26px;
+    }
+
+    .account.is-rail .account-meta {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }

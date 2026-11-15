@@ -1,0 +1,111 @@
+@namespace Leyeco2Dashboard.Client.Features.TransactionInspector.Components
+
+@* The passage: the three books a payment goes through, in order, side by side. Each opens on what it holds for the
+   bills the facility recorded as paid (the facility's paid amount, the queue's handed-over amount, the ledger's posted
+   amount), then its statuses, so reading across the headlines shows where the money stops, and the ledger closes on
+   how far it is short of the facility. A chevron on each column rule marks the hand-off. *@
+<section class="panel ti-passage" aria-labelledby="ti-passage-title">
+    <h3 class="sr-only" id="ti-passage-title">What each book holds for the bills inspected</h3>
+
+    <ol class="ti-books">
+        @foreach (var book in Books)
+        {
+            <li class="ti-book">
+                @if (book.Index > 0)
+                {
+                    <span class="ti-handoff" aria-hidden="true"><Icon Name="chevronRight" /></span>
+                }
+                <div class="ti-book-head">
+                    <span class="ti-book-name">@book.Name</span>
+                    <span class="ti-book-role">@book.Role</span>
+                </div>
+
+                @if (Summary is null)
+                {
+                    <div class="skeleton ti-skel-figure" aria-hidden="true"></div>
+                    <div class="skeleton ti-skel-lines" aria-hidden="true"></div>
+                }
+                else
+                {
+                    <div class="ti-book-figure">@Figures.Peso(book.Figure)</div>
+                    <div class="ti-book-sub">@book.Sub</div>
+
+                    <table class="ti-lines">
+                        <caption class="sr-only">@book.Name: bills and amount by status</caption>
+                        <thead class="sr-only">
+                            <tr><th scope="col">Status</th><th scope="col">Bills</th><th scope="col">Amount</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var line in book.Lines)
+                            {
+                                <tr>
+                                    <th scope="row"><span class="ti-dot @book.Tone(line.Key)" aria-hidden="true"></span>@line.Label</th>
+                                    <td class="num">@Figures.Count(line.Bills)</td>
+                                    <td class="num">@Figures.Peso(line.Amount)</td>
+                                </tr>
+                            }
+                            @if (book.Lines.Count == 0)
+                            {
+                                <tr><td colspan="3" class="ti-none">No paid bill to follow.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    @if (book.Index == 2 && Summary.Paid.Bills > 0)
+                    {
+                        <p class="ti-closing @(Level ? "is-level" : "is-short")">
+                            <Icon Name="@(Level ? "circleCheck" : "warning")" />
+                            @if (Level)
+                            {
+                                <span>Level with the facility</span>
+                            }
+                            else
+                            {
+                                <span>@Figures.Peso(Math.Abs(Summary.Shortfall)) @(Summary.Shortfall > 0 ? "short of" : "over") the facility</span>
+                            }
+                        </p>
+                    }
+                }
+            </li>
+        }
+    </ol>
+</section>
+
+@code {
+    /// <summary>The books' figures; null while the first read is under way.</summary>
+    [Parameter] public InspectionSummary? Summary { get; set; }
+
+    private sealed record Book(int Index, string Name, string Role, decimal Figure, string Sub, IReadOnlyList<InspectionLine> Lines, Func<string, string> Tone);
+
+    private bool Level => Summary is not null && Math.Abs(Summary.Shortfall) < 0.005m;
+
+    private IEnumerable<Book> Books
+    {
+        get
+        {
+            var summary = Summary ?? new InspectionSummary();
+
+            yield return new Book(0, "Online facility", "Recorded as paid",
+                summary.Paid.Amount,
+                $"{Figures.Plural(summary.Paid.Bills, "bill", "bills")} in {Figures.Plural(summary.PaidPayments, "payment", "payments")}",
+                summary.Facility, InspectionTones.Facility);
+
+            yield return new Book(1, "Posting queue", "Handed to the poster",
+                summary.Queued.Amount,
+                $"{Figures.Plural(summary.Queued.Bills, "paid bill", "paid bills")} queued",
+                summary.Queue, key => key == "none" ? "is-pencil" : InspectionTones.Queue(key));
+
+            yield return new Book(2, "Collections ledger", "Posted from these payments",
+                summary.Posted.Amount,
+                $"{Figures.Plural(summary.Posted.Bills, "bill", "bills")} posted under their payment's receipt",
+                summary.Ledger, LedgerTone);
+        }
+    }
+
+    private static string LedgerTone(string key) => key switch
+    {
+        "tallied" => "is-ink",
+        "none"    => "is-pencil",
+        _         => "is-fail",
+    };
+}

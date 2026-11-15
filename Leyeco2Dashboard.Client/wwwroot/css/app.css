@@ -1,0 +1,1621 @@
+/* ============================================================================
+   Leyeco II — Transaction Monitor Design System (Global)
+   The HRIS console's system (leyeco2-hris, Leyeco2HRIS.Client/wwwroot/css/app.css), carried over
+   whole: its tokens and atoms, less the HRIS's own screens' sections. Change a shared rule in both.
+   ----------------------------------------------------------------------------
+   This file holds ONLY genuinely shared atoms and tokens. Feature-specific
+   surfaces (sidebar, login, dashboard panels, departments page, etc.) live in
+   scoped *.razor.css files next to their components, so that each feature
+   carries its own visual contract.
+
+   Density contract — "the register". Screens read like the cooperative's
+   registers and ledgers: records lead, chrome recedes. Panels are
+   separated by 1px rules and tone, not shadows; text is 13px with tabular
+   figures; controls are 30px (24px small); table rows are 32px. The numbers
+   live in the tokens below — see CLAUDE.md → "Density" before adding a value.
+
+   Section index
+     1.  Tokens
+     2.  Base
+     3.  Page toolbar (page header) & section heading
+     4.  Bento grid, KPI strip & panels
+     5.  Cards
+     6.  Badges & pills
+     7.  Buttons
+     8.  Tables
+     9.  Pagination
+     10. Status indicators
+     11. Tabs & toggle group
+     12. Avatar
+     13. Forms (form-group, search field, ob-* helpers)
+     14. Modal system (+ confirm block)
+     15. Dialog form grid
+     16. Action links & misc
+     17. Placeholder card
+     18. Utilities
+     19. Animations & motion
+     20. Responsive
+     21. Blazor host bootstrap
+   ========================================================================== */
+
+/* ─── 1. Tokens ─── */
+:root {
+    /* Brand: the navy enamel of the LEYECO II seal. It does the work of the interface:
+       primary actions, selection, focus, links, the first series of a chart. */
+    --brand-primary: #1E3D6E;
+    --brand-darker:  #17305A;
+    --brand-dark:    #102246;
+    --brand-light:   #EDF2FA;
+    --brand-light2:  #D5E0F3;
+    --brand-glow:    rgba(41,82,163,0.28);
+    --brand-rule:    rgba(30,61,110,0.30);
+
+    /* Accent: the gold of the seal's gear. It marks a place and never carries text on white
+       (2.4:1): the register's margin rule, the open page in the sidebar, a milestone. Text on
+       a gold fill takes --gold-dark. */
+    --gold-primary:  #C9A44C;
+    --gold-dark:     #7D5A14;
+    --gold-light:    #FBF6E8;
+    --gold-light2:   #F0E0B4;
+    --gold-rule:     rgba(182,143,74,0.55);   /* the register's margin rule (# column) */
+
+    /* Red means something: an error, a removal, an expired or missing record, a clock-out,
+       the current-time line, the night tone of a shift. Never decoration. */
+    --red-primary:  #B22B1D;
+    --red-darker:   #A01D12;
+    --red-dark:     #7F1D1D;
+    --red-light:    #FFF6F4;
+    --red-light2:   #FFDAD4;
+    --red-glow:     rgba(178,43,29,0.20);
+
+    /* Neutrals */
+    --slate-900: #2A3439;
+    --slate-700: #475569;
+    --slate-600: #566166;
+    --slate-500: #64748B;
+    --slate-400: #94A3B8;
+    --slate-300: #A9B4B9;
+    --slate-200: #E1E9EE;
+    --slate-150: #D9E4EA;
+    --slate-100: #F0F4F7;
+    --slate-50:  #F7F9FB;
+    --white:     #FFFFFF;
+    --desk:      #F2F5F8;   /* app background behind panels */
+
+    /* Semantic */
+    --green-600:    #15803D;
+    --green-bright: #16A34A;
+    --green-100:    #DCFCE7;
+    --blue-100:     #D5E3FC;
+    --blue-700:     #455367;
+    --pink-200:     #F9CBD7;
+    --pink-700:     #62414E;
+    --amber-600:    #D97706;
+    --amber-100:    #FFFBEB;
+    --blue-link:    #2563EB;
+    --blue-link-bg: #EFF6FF;
+    --plum-800:     #6E1F7A;   /* overtime: text on its fill */
+    --plum-700:     #8E2A9C;   /* overtime: the solid mark (bands, OT chips, flags) */
+    --plum-200:     #E7C9EC;   /* overtime: rules and borders */
+    --plum-100:     #F6E9F8;   /* overtime: fill; the hue halfway between the day tone's blue and the night tone's red */
+
+    /* Chart series: identity, never meaning. One set, assigned in this order and never cycled: a stacked bar's
+       neighbours are each other's next slot, and the set was checked in this order for colour-blind separation
+       (adjacent pairs at least 14 apart under protanopia and deuteranopia). Navy and gold are the seal's; teal,
+       plum, burnt orange and sky the hues farthest from them and from each other (the orange stays clear of the
+       red that means something). Gold sits under 3:1 on white, so a chart that draws it keeps its figures in a
+       table too. The overall dashboard gives them to its channels in order: Teller, SBA, ECPay, Bayad Center,
+       SM Payment, Bizlink; another chart keeps an entity's slot where the two meet (ECPay and Bayad Center are 3
+       and 4 wherever they appear). Text on a fill: --slate-900 on 2, white on the rest. */
+    --series-1: #2F5A9E;
+    --series-2: #C9A44C;
+    --series-3: #0B8B6E;
+    --series-4: #8E2A9C;
+    --series-5: #D0662E;
+    --series-6: #4A9BD6;
+
+    /* Effects. Panels separate by rules and tone; shadows belong to floating layers
+       (menus, modals, toasts). */
+    --shadow-sm:  0 1px 2px rgba(15,23,42,0.05);
+    --shadow-md:  0 4px 12px -2px rgba(15,23,42,0.10);
+    --shadow-lg:  0 12px 32px -8px rgba(15,23,42,0.18);
+    --shadow-brand: 0 1px 2px rgba(16,34,70,0.30);
+
+    /* Radii: controls 4–6px, panels 8px, modals 10px. */
+    --radius-sm:   4px;
+    --radius-md:   6px;
+    --radius-lg:   8px;
+    --radius-full: 9999px;
+
+    /* Type. Plex Sans carries all UI and data; its Condensed cut sets titles and stat
+       figures so they take less width. */
+    --font-heading: 'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Segoe UI', sans-serif;
+    --font-body:    'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --fs-micro: 11px;
+    --fs-label: 12px;
+    --fs-body:  13px;
+    --fs-title: 14px;
+    --fs-page:  20px;
+
+    /* Layout & density */
+    --sidebar-w:      220px;
+    --sidebar-rail-w: 52px;
+    --statusbar-h:    24px;
+    --page-pad-y:     14px;
+    --page-pad-x:     20px;
+    --gap:            12px;   /* between panels */
+    --control-h:      30px;
+    --control-h-sm:   24px;
+    --cell-py:        6px;
+    --cell-px:        10px;
+
+    /* Motion */
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-spring:    cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-soft:      cubic-bezier(0.4, 0.0, 0.2, 1);
+    --t-fast:  0.12s;
+    --t-base:  0.18s;
+    --t-slow:  0.30s;
+}
+
+/* ─── 2. Base ─── */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+}
+
+/* A page whose panel has no natural height (the attendance locations map) fills the visible
+   area instead of growing with its records: its root carries .page-fill, the shell's page body
+   takes the height of the scroll viewport, and the page all of it. Its panels then share that
+   height with flex: 1 / height: 100%. A page whose own minimum is taller than the window
+   overflows, and the page scrolls as usual. */
+.page-body:has(> .page-fill),
+.page-fill {
+    height: 100%;
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    color: var(--slate-600);
+    background: var(--desk);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea {
+    font-family: inherit;
+}
+
+/* ─── 3. Page toolbar (page header) & section heading ───
+   One row per page: title and its one-line description on the left, search and
+   actions on the right. */
+.page-header {
+    margin-bottom: var(--gap);
+    min-width: 0;
+}
+
+    .page-header h2 {
+        font-family: var(--font-heading);
+        font-size: var(--fs-page);
+        font-weight: 600;
+        line-height: 26px;
+        letter-spacing: -0.1px;
+        color: var(--slate-900);
+    }
+
+    .page-header .subtitle {
+        font-size: 12.5px;
+        line-height: 18px;
+        color: var(--slate-500);
+        margin-top: 1px;
+        max-width: 96ch;
+    }
+
+.page-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px 16px;
+    flex-wrap: wrap;
+    margin-bottom: var(--gap);
+}
+
+    /* The title block takes the room the actions leave, so a long description wraps beside
+       them instead of pushing the search and buttons to a row of their own. */
+    .page-header-bar > .page-header {
+        flex: 1 1 360px;
+    }
+
+.page-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.section-heading {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--slate-900);
+}
+
+/* Suppress focus outline for programmatic heading focus from FocusOnNavigate. */
+.page-header h2:focus,
+.page-header h2:focus-visible,
+.login-form h2:focus,
+.login-form h2:focus-visible {
+    outline: none;
+}
+
+/* ─── 4. Bento grid, KPI strip & panels ─── */
+.bento-grid {
+    display: grid;
+    gap: var(--gap);
+    margin-bottom: var(--gap);
+}
+
+.bento-4   { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.bento-3   { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bento-2-1 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+
+/* A page's key figures: ONE ruled panel of equal cells (KpiCard), not a row of cards.
+   Each cell draws its own left and top rule outside its box; the strip clips the rules
+   that fall on its outer edge, so wrapped rows stay ruled without double borders. */
+.kpi-strip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    background: var(--white);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: var(--gap);
+}
+
+/* Generic panel: a titled, ruled surface for page sections (charts, lists, forms). */
+.panel {
+    background: var(--white);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-lg);
+    min-width: 0;
+}
+
+.panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    flex-wrap: wrap;
+    min-height: 38px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--slate-150);
+}
+
+.panel-title {
+    font-family: var(--font-heading);
+    font-size: var(--fs-title);
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--slate-900);
+}
+
+.panel-sub {
+    font-size: var(--fs-label);
+    color: var(--slate-500);
+}
+
+.panel-body {
+    padding: 10px 12px;
+}
+
+/* ─── 5. Cards ─── */
+.card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--slate-200);
+    padding: 12px 14px;
+    position: relative;
+    overflow: hidden;
+}
+
+.card-red {
+    background: var(--red-primary);
+    color: var(--red-light);
+    border-color: var(--red-primary);
+}
+
+    .card-red .card-label { color: rgba(255,246,244,0.75); }
+    .card-red .card-value { color: var(--red-light); }
+
+.card-outlined { border: 1px solid var(--brand-primary); }
+
+.card-muted {
+    background: var(--slate-100);
+    border-color: var(--slate-150);
+}
+
+.card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.card-icon.red   { background: var(--red-light);  color: var(--red-primary); }
+.card-icon.blue  { background: var(--blue-100);   color: var(--blue-700);    }
+.card-icon.green { background: var(--green-100);  color: var(--green-600);   }
+.card-icon.pink  { background: var(--pink-200);   color: var(--pink-700);    }
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.card-label {
+    font-size: var(--fs-label);
+    font-weight: 500;
+    color: var(--slate-600);
+    margin-bottom: 2px;
+}
+
+.card-value {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 28px;
+    color: var(--slate-900);
+    font-variant-numeric: tabular-nums;
+}
+
+.card-sub {
+    font-size: var(--fs-label);
+    color: var(--slate-500);
+}
+
+/* ─── 6. Badges & pills ─── */
+.card-badge {
+    font-size: 11.5px;
+    line-height: 16px;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+    .card-badge i { font-size: 9.5px; }
+
+.badge-green { background: #F0FDF4;             color: var(--green-600);    }
+.badge-red   { background: var(--red-light);    color: var(--red-primary);  }
+.badge-amber { background: var(--amber-100);    color: #B45309;             }
+.badge-blue  { background: var(--blue-link-bg); color: var(--blue-link);    }
+.badge-gray  { background: var(--slate-100);    color: var(--slate-600);    }
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 8px;
+    line-height: 18px;
+    border-radius: var(--radius-full);
+    font-size: 11.5px;
+    font-weight: 500;
+}
+
+.pill-red   { background: var(--red-light2); color: var(--red-darker); }
+.pill-green { background: var(--green-100);  color: var(--green-600);  }
+
+/* ─── 7. Buttons ───
+   Every button carries a 1px border (transparent on filled ones) so primary,
+   secondary and danger buttons share one height: 30px, small 24px, large 36px. */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    font-weight: 500;
+    line-height: 18px;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    position: relative;
+    transition: background var(--t-fast) var(--ease-out-quart),
+                color var(--t-fast) var(--ease-out-quart),
+                border-color var(--t-fast) var(--ease-out-quart),
+                box-shadow var(--t-fast) var(--ease-out-quart);
+}
+
+    .btn i {
+        font-size: 12px;
+    }
+
+    .btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px var(--brand-glow);
+    }
+
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-primary {
+    background: var(--brand-primary);
+    color: var(--brand-light);
+    box-shadow: var(--shadow-brand);
+}
+
+    .btn-primary:hover:not(:disabled) {
+        background: var(--brand-darker);
+    }
+
+.btn-secondary {
+    background: var(--white);
+    color: var(--slate-700);
+    border-color: var(--slate-200);
+}
+
+    .btn-secondary:hover:not(:disabled) {
+        background: var(--slate-50);
+        border-color: var(--slate-300);
+    }
+
+.btn-ghost {
+    background: none;
+    color: var(--brand-primary);
+    padding: 5px 8px;
+}
+
+    .btn-ghost:hover:not(:disabled) { background: var(--brand-light); }
+
+.btn-danger {
+    background: #DC2626;
+    color: #FEF2F2;
+    box-shadow: 0 1px 2px rgba(153,27,27,0.28);
+}
+
+    .btn-danger:hover:not(:disabled) {
+        background: #B91C1C;
+    }
+
+.btn-sm { padding: 2px 8px;  font-size: var(--fs-label); line-height: 18px; gap: 5px; }
+.btn-lg { padding: 8px 16px; font-size: var(--fs-title);  line-height: 18px; }
+
+    .btn-sm i { font-size: 11px; }
+
+/* Square icon-only button for toolbars (refresh, print, …); always pair with aria-label. */
+.btn-icon {
+    width: var(--control-h);
+    padding: 5px 0;
+}
+
+    .btn-icon.btn-sm { width: var(--control-h-sm); padding: 2px 0; }
+
+/* Inline spinner for buttons in their busy state ("Saving…", "Deleting…"). */
+.btn-spinner {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    display: inline-block;
+    flex-shrink: 0;
+    animation: app-spin 0.7s linear infinite;
+}
+
+/* ─── 8. Tables ───
+   The register: sticky header band, 32px rows, tabular figures, and the # column as
+   the page margin (a red rule between the index and the record). The wrapper clips
+   (overflow: clip, not hidden) so the header can stick to the page's scroll. */
+.table-wrap {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--slate-200);
+    overflow: clip;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--slate-50);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    line-height: 18px;
+    color: var(--slate-600);
+    text-align: left;
+    white-space: nowrap;
+    padding: var(--cell-py) var(--cell-px);
+    border-bottom: 1px solid var(--slate-200);
+}
+
+tbody td {
+    padding: var(--cell-py) var(--cell-px);
+    line-height: 19px;
+    border-bottom: 1px solid var(--slate-100);
+    font-size: var(--fs-body);
+    color: var(--slate-900);
+    vertical-align: middle;
+}
+
+tbody tr {
+    transition: background var(--t-fast) var(--ease-out-quart);
+}
+
+    tbody tr:hover    { background: var(--slate-50); }
+    tbody tr:last-child td { border-bottom: none; }
+
+/* An inline-flex badge or status sits on its own first baseline (a status takes it from its
+   dot) and would grow the line by a pixel; top-aligned, each fits the cell's 19px line. */
+tbody td .card-badge,
+tbody td .status {
+    vertical-align: top;
+}
+
+tbody td .status {
+    line-height: 19px;
+}
+
+/* A 22px avatar beside a one-line name lays out at the line's 19px, overhanging the cell's
+   padding by 1.5px each side, so a person row stays a 32px row. */
+tbody td .avatar-sm {
+    margin-top: -1.5px;
+    margin-bottom: -1.5px;
+}
+
+/* Figures: right-aligned so place values line up down the column. */
+th.num, td.num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.table-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-height: 36px;
+    padding: 4px 10px;
+    font-size: var(--fs-label);
+    color: var(--slate-500);
+    border-top: 1px solid var(--slate-200);
+    background: var(--slate-50);
+}
+
+/* 26px to hit, 19px to lay out: top-aligned with 3.5px of negative margin above and below, an
+   icon button fills exactly the cell's 19px line and stands centred on it, so a row of action
+   buttons stays a 32px row. */
+.table-icon-btn {
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-sm);
+    color: var(--slate-500);
+    cursor: pointer;
+    font-size: 12.5px;
+    margin: -3.5px 0 -3.5px 2px;
+    text-decoration: none;
+    vertical-align: top;
+    transition: color var(--t-fast) var(--ease-out-quart),
+                background var(--t-fast) var(--ease-out-quart);
+}
+
+    .table-icon-btn:hover {
+        color: var(--brand-primary);
+        background: var(--brand-light);
+    }
+
+    .table-icon-btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--brand-glow);
+        color: var(--brand-primary);
+    }
+
+    .table-icon-btn.danger:hover {
+        color: #DC2626;
+        background: #FEF2F2;
+    }
+
+    /* An action that can't run here: drawn faint and inert, its title says why. */
+    .table-icon-btn:disabled,
+    .table-icon-btn:disabled:hover {
+        color: var(--slate-300);
+        background: transparent;
+        cursor: not-allowed;
+    }
+
+/* Leading row-number ("#") column — the register's margin. */
+.row-num {
+    width: 48px;
+    color: var(--slate-400);
+    font-size: var(--fs-label);
+    text-align: right;
+    white-space: nowrap;
+    box-shadow: inset -1px 0 0 var(--gold-rule);
+}
+
+table:has(td.row-num) thead th:first-child {
+    text-align: right;
+    box-shadow: inset -1px 0 0 var(--gold-rule);
+}
+
+/* ─── 9. Pagination ─── */
+.pagination {
+    display: flex;
+    gap: 2px;
+}
+
+    .pagination button {
+        min-width: 26px;
+        height: 26px;
+        padding: 0 6px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--slate-200);
+        background: var(--white);
+        font-size: var(--fs-label);
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--slate-700);
+        transition: background var(--t-fast) var(--ease-out-quart),
+                    color var(--t-fast) var(--ease-out-quart),
+                    border-color var(--t-fast) var(--ease-out-quart);
+    }
+
+        .pagination button i { font-size: 10px; }
+
+        .pagination button:hover:not(:disabled) {
+            background: var(--slate-50);
+            border-color: var(--slate-300);
+        }
+
+        .pagination button.active {
+            background: var(--brand-primary);
+            color: var(--white);
+            border-color: var(--brand-primary);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+/* ─── 10. Status indicators ─── */
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--fs-label);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-active { color: var(--green-600); }
+    .status-active .status-dot { background: var(--green-600); }
+
+.status-leave { color: #B45309; }
+    .status-leave .status-dot { background: var(--amber-600); }
+
+.status-info { color: #2563EB; }
+    .status-info .status-dot { background: #2563EB; }
+
+.status-danger { color: var(--red-primary); }
+    .status-danger .status-dot { background: var(--red-primary); }
+
+.status-muted { color: var(--slate-500); }
+    .status-muted .status-dot { background: var(--slate-400); }
+
+/* ─── 11. Tabs & toggle group ─── */
+.tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--slate-200);
+    margin-bottom: var(--gap);
+    overflow-x: auto;
+}
+
+.tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px 5px;
+    font-size: var(--fs-body);
+    font-weight: 500;
+    line-height: 18px;
+    color: var(--slate-500);
+    cursor: pointer;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    font-family: var(--font-body);
+    white-space: nowrap;
+    transition: color var(--t-fast) var(--ease-out-quart),
+                border-color var(--t-fast) var(--ease-out-quart);
+}
+
+    .tab:hover { color: var(--slate-900); }
+
+    .tab:focus-visible {
+        outline: none;
+        box-shadow: inset 0 0 0 2px var(--brand-glow);
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    }
+
+    .tab.active {
+        color: var(--brand-primary);
+        border-bottom-color: var(--brand-primary);
+    }
+
+/* Record count beside a tab label. */
+.tab-count {
+    min-width: 18px;
+    padding: 0 5px;
+    border-radius: var(--radius-full);
+    background: var(--slate-100);
+    color: var(--slate-600);
+    font-size: var(--fs-micro);
+    line-height: 16px;
+    font-weight: 600;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.tab.active .tab-count {
+    background: var(--brand-light);
+    color: var(--brand-primary);
+}
+
+.toggle-group {
+    display: inline-flex;
+    background: var(--slate-100);
+    border-radius: var(--radius-md);
+    padding: 2px;
+}
+
+/* 2px track + 26px options = the 30px control height, so a toggle group lines up with the
+   inputs and buttons of the same toolbar row. */
+.toggle-opt {
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    line-height: 18px;
+    cursor: pointer;
+    color: var(--slate-500);
+    border: none;
+    background: none;
+    font-family: var(--font-body);
+    font-weight: 500;
+    transition: background var(--t-fast) var(--ease-out-quart),
+                color var(--t-fast) var(--ease-out-quart),
+                box-shadow var(--t-fast) var(--ease-out-quart);
+}
+
+    .toggle-opt.active {
+        background: var(--white);
+        color: var(--slate-900);
+        box-shadow: var(--shadow-sm);
+    }
+
+/* ─── 12. Avatar ─── */
+.avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--slate-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: var(--fs-micro);
+    color: var(--slate-700);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.avatar-sm {
+    width: 22px;
+    height: 22px;
+    font-size: 9.5px;
+}
+
+/* ─── 13. Forms ─── */
+.form-group {
+    margin-bottom: 12px;
+}
+
+    .form-group label {
+        display: block;
+        font-size: var(--fs-label);
+        font-weight: 500;
+        line-height: 16px;
+        color: var(--slate-600);
+        margin-bottom: 4px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 5px 10px;
+        border: 1px solid var(--slate-200);
+        border-radius: var(--radius-md);
+        font-size: var(--fs-body);
+        line-height: 18px;
+        font-family: var(--font-body);
+        color: var(--slate-900);
+        background: var(--white);
+        transition: border-color var(--t-fast) var(--ease-out-quart),
+                    box-shadow var(--t-fast) var(--ease-out-quart);
+    }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 3px var(--brand-glow);
+        }
+
+.form-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+    .form-row label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: var(--fs-body);
+        color: var(--slate-600);
+        cursor: pointer;
+    }
+
+        .form-row label input[type="checkbox"] {
+            accent-color: var(--brand-primary);
+        }
+
+    .form-row a {
+        font-size: var(--fs-body);
+        color: var(--brand-primary);
+        text-decoration: none;
+    }
+
+/* Search input with a leading magnifier, sized for page toolbars and filter bars:
+   <label class="search-field"><Icon Name="search" /><input class="ob-input" … /></label> */
+.search-field {
+    position: relative;
+    display: block;
+    width: 280px;
+    max-width: 100%;
+}
+
+    .search-field > i {
+        position: absolute;
+        top: 50%;
+        left: 10px;
+        transform: translateY(-50%);
+        font-size: 11.5px;
+        color: var(--slate-400);
+        pointer-events: none;
+        transition: color var(--t-fast) var(--ease-out-quart);
+    }
+
+    .search-field > input {
+        width: 100%;
+        padding-left: 29px;
+    }
+
+    .search-field:focus-within > i {
+        color: var(--brand-primary);
+    }
+
+/* Field messages under an input: a hint, an inline validation error, and the "(optional)"
+   note beside a label. (Many modals still carry scoped copies of these; new forms use these.) */
+.field-helper {
+    font-size: var(--fs-micro);
+    line-height: 15px;
+    color: var(--slate-500);
+    margin-top: 3px;
+}
+
+.field-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    margin-top: 4px;
+    font-size: var(--fs-label);
+    line-height: 16px;
+    color: #DC2626;
+    animation: fadeSlideUp 0.18s var(--ease-out-quart) both;
+}
+
+    .field-error i {
+        flex-shrink: 0;
+        font-size: 11px;
+        margin-top: 3px;
+    }
+
+.field-optional {
+    font-size: var(--fs-micro);
+    font-weight: 400;
+    color: var(--slate-500);
+}
+
+/* Filter bar between the stat strip and a table: compact controls on one line. */
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+/* ─── 13b. Onboarding form helpers (used widely as form atoms) ─── */
+.ob-field-label {
+    display: block;
+    font-size: var(--fs-label);
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--slate-600);
+    margin-bottom: 4px;
+}
+
+.ob-input {
+    width: 100%;
+    padding: 5px 10px;
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-body);
+    line-height: 18px;
+    font-family: var(--font-body);
+    color: var(--slate-900);
+    background: var(--white);
+    transition: border-color var(--t-fast) var(--ease-out-quart),
+                box-shadow var(--t-fast) var(--ease-out-quart);
+}
+
+    .ob-input:focus {
+        outline: none;
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 3px var(--brand-glow);
+    }
+
+.ob-section-head {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    color: var(--slate-700);
+    margin: 0 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--slate-100);
+}
+
+.ob-toggle {
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: background var(--t-base) var(--ease-out-quart);
+}
+
+.ob-toggle-knob {
+    position: absolute;
+    top: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--white);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    transition: left var(--t-base) var(--ease-spring);
+}
+
+/* ─── 14. Modal system ─── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(42, 52, 57, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: backdropReveal 0.16s ease both;
+}
+
+    .modal-overlay.is-closing {
+        animation: backdropFade 0.14s ease both;
+    }
+
+.modal {
+    background: var(--white);
+    border-radius: 10px;
+    box-shadow: 0 18px 48px rgba(15,23,42,0.20);
+    width: 480px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    animation: panelReveal 0.2s var(--ease-spring) both;
+}
+
+    .modal.is-closing { animation: panelFade 0.14s ease both; }
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px 10px 16px;
+    border-bottom: 1px solid var(--slate-150);
+    flex-shrink: 0;
+}
+
+    .modal-header h3 {
+        font-family: var(--font-heading);
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 22px;
+        color: var(--slate-900);
+        margin: 0;
+    }
+
+.modal-close-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--slate-500);
+    flex-shrink: 0;
+    font-size: 12px;
+    transition: background var(--t-fast) var(--ease-out-quart),
+                color var(--t-fast) var(--ease-out-quart),
+                border-color var(--t-fast) var(--ease-out-quart);
+}
+
+    .modal-close-btn:hover {
+        background: var(--slate-100);
+        border-color: var(--slate-200);
+        color: var(--slate-900);
+    }
+
+    .modal-close-btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px var(--brand-glow);
+    }
+
+.modal-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--slate-150);
+    background: var(--slate-50);
+    flex-shrink: 0;
+}
+
+.modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+    .modal-field .modal-field-value {
+        font-size: var(--fs-body);
+        color: var(--slate-900);
+        font-weight: 500;
+    }
+
+.modal-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* Confirm-delete block (used inside modal body) */
+.modal-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    text-align: center;
+    padding: 4px 0 2px;
+}
+
+    .modal-confirm .icon-wrap {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #FEF2F2;
+        color: #DC2626;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+    }
+
+    .modal-confirm h4 {
+        font-family: var(--font-heading);
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--slate-900);
+    }
+
+    .modal-confirm p {
+        font-size: var(--fs-body);
+        color: var(--slate-600);
+        max-width: 360px;
+        line-height: 1.5;
+    }
+
+    .modal-confirm .target {
+        font-weight: 600;
+        color: var(--slate-900);
+    }
+
+/* Inline failure banner inside a modal body — carries the server's exact
+   validation reason (e.g. "Department code already exists in the database."). */
+.modal-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: var(--radius-md);
+    color: #B91C1C;
+    font-size: 12.5px;
+    line-height: 1.45;
+    animation: fadeSlideUp 0.18s var(--ease-out-quart) both;
+}
+
+    .modal-error i {
+        flex-shrink: 0;
+        font-size: 12px;
+        margin-top: 2px;
+    }
+
+/* Full-width load-failure state for list pages: what went wrong + a retry action. */
+.page-error {
+    background: var(--white);
+    border: 1px solid #FECACA;
+    border-radius: var(--radius-lg);
+    padding: 28px 24px;
+    text-align: center;
+    color: var(--slate-600);
+}
+
+    .page-error .icon-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #FEF2F2;
+        color: #DC2626;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    .page-error h4 {
+        font-family: var(--font-heading);
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--slate-900);
+        margin-bottom: 4px;
+    }
+
+    .page-error p {
+        font-size: var(--fs-body);
+        max-width: 460px;
+        margin: 0 auto 14px;
+        line-height: 1.5;
+    }
+
+/* Empty / no-results state inside a list page. */
+.empty-state {
+    background: var(--white);
+    border: 1px dashed var(--slate-200);
+    border-radius: var(--radius-lg);
+    padding: 28px 24px;
+    text-align: center;
+    color: var(--slate-500);
+}
+
+    .empty-state .icon-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--slate-100);
+        color: var(--slate-400);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    .empty-state h4 {
+        font-family: var(--font-heading);
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--slate-900);
+        margin-bottom: 4px;
+    }
+
+    .empty-state p {
+        font-size: var(--fs-body);
+        max-width: 420px;
+        margin: 0 auto;
+        line-height: 1.5;
+    }
+
+    .empty-state .btn {
+        margin-top: 14px;
+    }
+
+    /* Inside a panel or card that already draws the frame. */
+    .empty-state.is-inset {
+        border: none;
+        border-radius: 0;
+        background: none;
+        padding: 20px 16px;
+    }
+
+/* ─── 15. Dialog form grid ───
+   Two columns inside .modal-body for dialogs whose fields pair up (first and last name, username and
+   e-mail). A field opts into the full width with .form-group-full. */
+.edit-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+}
+
+    .edit-form-grid .form-group {
+        margin-bottom: 0;
+    }
+
+    .edit-form-grid .form-group-full {
+        grid-column: 1 / -1;
+    }
+
+/* ─── 16. Action links & misc ─── */
+.action-link {
+    color: var(--brand-primary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: var(--fs-body);
+    transition: opacity var(--t-fast) var(--ease-out-quart);
+}
+
+    .action-link:hover {
+        text-decoration: underline;
+        opacity: 0.85;
+    }
+
+/* ─── 17. Placeholder card ─── */
+.placeholder-card {
+    background: var(--white);
+    border: 1px dashed var(--slate-200);
+    border-radius: var(--radius-lg);
+    padding: 32px 24px;
+    text-align: center;
+    color: var(--slate-500);
+}
+
+    .placeholder-card h3 {
+        font-family: var(--font-heading);
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--slate-900);
+        margin-bottom: 4px;
+    }
+
+    .placeholder-card p { font-size: var(--fs-body); }
+
+/* ─── 18. Utilities ─── */
+.flex            { display: flex; }
+.flex-col        { flex-direction: column; }
+.items-center    { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-4           { gap: 4px;  }
+.gap-8           { gap: 8px;  }
+.gap-12          { gap: 12px; }
+.gap-16          { gap: 16px; }
+.gap-24          { gap: 24px; }
+.gap-32          { gap: 32px; }
+.text-sm         { font-size: var(--fs-label); }
+.text-muted      { color: var(--slate-500); }
+.fw-600          { font-weight: 600; }
+.mt-24           { margin-top: 24px; }
+.mb-16           { margin-bottom: 16px; }
+.mb-24           { margin-bottom: 24px; }
+.mb-32           { margin-bottom: 32px; }
+
+/* Read by screen readers, not drawn (labels for icon-only cells, table captions). */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* Single line with an ellipsis; pair with a title attribute carrying the full text. */
+.truncate {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* Record numbers (employee no., codes, TINs): tabular, with a slashed zero so 0 and
+   O never read alike. */
+.t-code {
+    font-variant-numeric: tabular-nums slashed-zero;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+}
+
+/* ─── 19. Animations & motion ───
+   Motion answers the user's own actions (opening a modal, expanding a group, a toast
+   arriving). Pages and rows appear without staged entrances.
+   IMPORTANT: rested end-states use `transform: none` (not `translateY(0)` or any
+   identity transform) so the animated element does NOT become a containing block
+   for `position: fixed` descendants. Otherwise the global modal overlay would be
+   clipped to whatever element is animating. See CLAUDE.md → "Motion & Containing
+   Blocks". */
+@keyframes slideOutRow {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(16px); }
+}
+
+@keyframes backdropReveal {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes backdropFade {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+@keyframes panelReveal {
+    from { opacity: 0; transform: scale(0.98) translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes panelFade {
+    from { opacity: 1; transform: scale(1) translateY(0); }
+    to   { opacity: 0; transform: scale(0.98) translateY(-3px); }
+}
+
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(3px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes shimmer {
+    0%   { background-position: -360px 0; }
+    100% { background-position:  360px 0; }
+}
+
+@keyframes app-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Skeleton loading shimmer (for placeholder rows / cards). */
+.skeleton {
+    background: linear-gradient(90deg,
+                var(--slate-100) 0%,
+                var(--slate-200) 50%,
+                var(--slate-100) 100%);
+    background-size: 720px 100%;
+    animation: shimmer 1.4s linear infinite;
+    border-radius: var(--radius-sm);
+    color: transparent !important;
+}
+
+/* Reduced motion (honor OS preference). */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ─── 20. Responsive ─── */
+@media (max-width: 1100px) {
+    .bento-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .kpi-strip {
+        grid-auto-flow: row;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .bento-4, .bento-3, .bento-2-1 {
+        grid-template-columns: 1fr;
+    }
+
+    .search-field {
+        width: 100%;
+    }
+}
+
+/* ─── 20b. Ledger footing ───
+   A register's total is footed as a ledger foots it: a single rule over the figures it sums and a double
+   rule under the sum, in ink. Only a row that is the sum of the rows above it takes it; a table's other
+   rows stay on its hairlines. <tfoot class="ledger-foot"><tr><th scope="row">Total</th><td class="num">…</td></tr></tfoot> */
+.ledger-foot th,
+.ledger-foot td {
+    padding: var(--cell-py) var(--cell-px);
+    font-size: var(--fs-body);
+    line-height: 19px;
+    font-weight: 600;
+    color: var(--slate-900);
+    text-align: left;
+    background: var(--white);
+    border-top: 1px solid var(--slate-700);
+    border-bottom: 3px double var(--slate-700);
+}
+
+    .ledger-foot th:first-child,
+    .ledger-foot td:first-child {
+        font-family: var(--font-heading);
+    }
+
+    .ledger-foot .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+/* A series' swatch beside its name, in a legend or a register's first cell. Its colour comes inline
+   (style="--swatch: var(--series-1)"). */
+.swatch-dot {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--swatch, var(--slate-300));
+    vertical-align: -1px;
+}
+
+/* ─── 21. Blazor host bootstrap ─── */
+.app-loading {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--desk);
+    gap: 14px;
+}
+
+.app-loading-mark {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .app-loading-mark img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+.app-loading-text {
+    font-family: var(--font-heading);
+    font-size: var(--fs-title);
+    font-weight: 600;
+    color: var(--slate-600);
+}
+
+.app-loading-spinner {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--slate-200);
+    border-top-color: var(--brand-primary);
+    animation: app-spin 0.8s linear infinite;
+}
+
+#blazor-error-ui {
+    background: var(--white);
+    border-top: 3px solid var(--red-primary);
+    bottom: 0;
+    box-shadow: var(--shadow-lg);
+    display: none;
+    left: 0;
+    padding: 10px 20px;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    color: var(--slate-700);
+    font-size: var(--fs-body);
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 12px;
+        top: 8px;
+        color: var(--slate-500);
+    }
+
+    #blazor-error-ui .reload {
+        color: var(--red-primary);
+        margin-left: 8px;
+    }
+

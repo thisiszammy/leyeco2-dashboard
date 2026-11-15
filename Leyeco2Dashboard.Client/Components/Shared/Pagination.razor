@@ -1,0 +1,79 @@
+@namespace Leyeco2Dashboard.Client.Components.Shared
+
+<div class="pagination" role="navigation" aria-label="Pagination">
+    <button type="button" disabled="@(CurrentPage <= 1)" @onclick="() => Go(CurrentPage - 1)" aria-label="Previous page">
+        <Icon Name="chevronLeft" />
+    </button>
+
+    @foreach (var item in BuildItems())
+    {
+        if (item.IsEllipsis)
+        {
+            <button type="button" disabled style="cursor:default" aria-hidden="true">…</button>
+        }
+        else
+        {
+            var p = item.Page;
+            <button type="button"
+                    class="@(p == CurrentPage ? "active" : null)"
+                    aria-label="Page @p"
+                    aria-current="@(p == CurrentPage ? "page" : null)"
+                    @onclick="() => Go(p)">@p</button>
+        }
+    }
+
+    <button type="button" disabled="@(CurrentPage >= TotalPages)" @onclick="() => Go(CurrentPage + 1)" aria-label="Next page">
+        <Icon Name="chevronRight" />
+    </button>
+</div>
+
+@code {
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; } = 1;
+    [Parameter] public EventCallback<int> CurrentPageChanged { get; set; }
+
+    private record Item(int Page, bool IsEllipsis = false);
+
+    private async Task Go(int page)
+    {
+        if (page < 1 || page > TotalPages || page == CurrentPage) return;
+        CurrentPage = page;
+        await CurrentPageChanged.InvokeAsync(page);
+    }
+
+    private IEnumerable<Item> BuildItems()
+    {
+        if (TotalPages <= 7)
+        {
+            for (var i = 1; i <= TotalPages; i++) yield return new Item(i);
+            yield break;
+        }
+
+        // Sliding window around the current page with both endpoints pinned:
+        // 1 … 6 [7] 8 … 20. The strip is always exactly 7 items wide so the
+        // control never changes width while paging.
+        var windowStart = Math.Max(2, CurrentPage - 1);
+        var windowEnd = Math.Min(TotalPages - 1, CurrentPage + 1);
+
+        if (CurrentPage <= 3)
+        {
+            windowStart = 2;
+            windowEnd = 5;
+        }
+        else if (CurrentPage >= TotalPages - 2)
+        {
+            windowStart = TotalPages - 4;
+            windowEnd = TotalPages - 1;
+        }
+
+        yield return new Item(1);
+
+        if (windowStart > 2) yield return new Item(0, IsEllipsis: true);
+
+        for (var i = windowStart; i <= windowEnd; i++) yield return new Item(i);
+
+        if (windowEnd < TotalPages - 1) yield return new Item(0, IsEllipsis: true);
+
+        yield return new Item(TotalPages);
+    }
+}

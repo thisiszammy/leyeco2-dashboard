@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DotNetEnv" Version="3.1.1" />
+    <!-- Validates the access tokens this API mints for its sessions (Authentication/). -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.6">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
+  </ItemGroup>
+
+  <!-- PermissionEnum and AccessedSystemEnum: the vocabulary of grants, read across Authentication/ and Authorization/. -->
+  <ItemGroup>
+    <Using Include="Leyeco2Dashboard.Data.Enums" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Leyeco2Dashboard.Data\Leyeco2Dashboard.Data.csproj" />
+    <ProjectReference Include="..\Leyeco2Dashboard.Services\Leyeco2Dashboard.Services.csproj" />
+  </ItemGroup>
+
+  <!-- Debug builds serve the Blazor WebAssembly console from this host (Program.cs, #if DEBUG), so one launch
+       brings up both on one origin. Release leaves it out: the console ships from its own publish, and a host's
+       publish would carry its index.html with the SDK's placeholders unfilled. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.15" />
+    <ProjectReference Include="..\Leyeco2Dashboard.Client\Leyeco2Dashboard.Client.csproj" />
+  </ItemGroup>
+
+</Project>

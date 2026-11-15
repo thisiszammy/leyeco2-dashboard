@@ -1,0 +1,13 @@
+@namespace Leyeco2Dashboard.Client.Components.Shared
+
+@if (!string.IsNullOrEmpty(_cls))
+{
+    <i class="@_cls @Class" aria-hidden="true"></i>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    [Parameter] public string? Class { get; set; }
+
+    private string _cls => IconLibrary.Get(Name);
+}

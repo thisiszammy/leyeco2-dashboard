@@ -1,0 +1,238 @@
+/* ReconciliationPlan — under construction, drawn in pencil.
+   The console's pencil-and-ink convention: dashed while a thing is only planned or suggested, solid once it is
+   on file. Every frame of the section to come is dashed in --slate-300 on the desk, with its title in words and
+   its contents sketched in the quietest slates; the notice above them, the one thing that is true today, is ink
+   with a headline panel's gold top rule. */
+
+.recon {
+    margin-top: 4px;
+}
+
+.recon-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.recon-status {
+    line-height: 18px;
+    padding: 2px 8px;
+}
+
+/* ── The notice: a headline panel, so it takes the gold top rule ── */
+.recon-notice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: var(--gap);
+    padding: 12px 14px;
+    background: var(--white);
+    border: 1px solid var(--slate-200);
+    border-top: 3px solid var(--gold-primary);
+    border-radius: var(--radius-lg);
+}
+
+.recon-notice-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-md);
+    background: var(--brand-light);
+    color: var(--brand-primary);
+    font-size: 13px;
+}
+
+.recon-notice-text {
+    flex: 1;
+    min-width: 0;
+}
+
+    .recon-notice-text h4 {
+        font-family: var(--font-heading);
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 20px;
+        color: var(--slate-900);
+    }
+
+    .recon-notice-text p {
+        max-width: 78ch;
+        margin-top: 2px;
+        font-size: var(--fs-body);
+        line-height: 1.45;
+        color: var(--slate-600);
+    }
+
+.recon-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.75fr) minmax(320px, 1fr);
+    gap: var(--gap);
+    margin-bottom: var(--gap);
+}
+
+/* ── Pencil frames ── */
+.recon-pencil {
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px dashed var(--slate-300);
+}
+
+    .recon-pencil .panel-head {
+        border-bottom: 1px dashed var(--slate-200);
+    }
+
+    .recon-pencil .panel-title {
+        color: var(--slate-700);
+    }
+
+/* The strip's cells rule each other in pencil too: a dashed left edge, none on the first. */
+.kpi-strip.recon-pencil ::deep .stat {
+    background: transparent;
+    box-shadow: none;
+    border-left: 1px dashed var(--slate-200);
+}
+
+    .kpi-strip.recon-pencil ::deep .stat:first-child {
+        border-left: 0;
+    }
+
+.kpi-strip.recon-pencil ::deep .stat-value {
+    color: var(--slate-400);
+}
+
+/* ── Sketches ── */
+.stroke {
+    display: inline-block;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--slate-150);
+    vertical-align: middle;
+}
+
+    .stroke.is-figure {
+        background: var(--slate-200);
+    }
+
+/* Reconciliation: one bar split three ways, keyed by the legend's words. Tone by meaning, kept pale: navy
+   for what agrees, amber for what waits, red for what nothing settles. */
+.sketch-split {
+    display: flex;
+    gap: 3px;
+    height: 14px;
+    margin: 6px 0 12px;
+}
+
+    .sketch-split span {
+        border: 1px dashed var(--slate-300);
+        border-radius: var(--radius-sm);
+    }
+
+.is-matched   { background: var(--brand-light); }
+.is-review    { background: var(--amber-100); }
+.is-unmatched { background: var(--red-light); }
+
+.sketch-legend > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-top: 1px dashed var(--slate-150);
+    font-size: var(--fs-body);
+    line-height: 19px;
+}
+
+.sketch-legend dt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--slate-700);
+}
+
+.sketch-legend dd {
+    color: var(--slate-400);
+    font-variant-numeric: tabular-nums;
+}
+
+.swatch {
+    width: 10px;
+    height: 10px;
+    border: 1px dashed var(--slate-300);
+    border-radius: 2px;
+}
+
+/* Exceptions: the register as it will read, its header band and margin rule in place, its rows in pencil. */
+.sketch-register {
+    font-size: var(--fs-body);
+}
+
+.sketch-row {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.4fr);
+    align-items: center;
+    height: 32px;
+    border-bottom: 1px dashed var(--slate-150);
+}
+
+    .sketch-row:last-child {
+        border-bottom: 0;
+    }
+
+    .sketch-row > span {
+        padding: 0 10px;
+        min-width: 0;
+    }
+
+    .sketch-row.is-head {
+        background: var(--slate-50);
+        border-bottom: 1px solid var(--slate-150);
+        font-size: var(--fs-label);
+        font-weight: 600;
+        color: var(--slate-600);
+    }
+
+    .sketch-row .num {
+        text-align: right;
+    }
+
+/* The register's margin: the # column ruled off in gold, as every register's is. */
+.sketch-num {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    border-right: 1px solid var(--gold-rule);
+}
+
+@media (max-width: 1180px) {
+    .recon-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .kpi-strip.recon-pencil ::deep .stat:nth-child(odd) {
+        border-left: 0;
+    }
+
+    .kpi-strip.recon-pencil ::deep .stat:nth-child(n+3) {
+        border-top: 1px dashed var(--slate-200);
+    }
+}
+
+@media (max-width: 640px) {
+    .recon-notice {
+        flex-wrap: wrap;
+    }
+
+    .sketch-row {
+        grid-template-columns: 40px minmax(0, 1.3fr) minmax(0, 0.9fr) minmax(0, 0.9fr);
+    }
+
+    .sketch-row .col-source,
+    .sketch-row .col-reason {
+        display: none;
+    }
+}

@@ -1,0 +1,36 @@
+/* SplitBar: a tall segmented bar (24px), each part its own block with 4px corners and 2px of white between
+   them; a figure inside at the leading edge, in the fill's own ink. */
+.split {
+    display: flex;
+    gap: 2px;
+    height: 24px;
+    min-width: 0;
+}
+
+    .split.is-compact {
+        height: 18px;
+    }
+
+    .split.is-empty {
+        background: var(--slate-100);
+        border-radius: var(--radius-sm);
+    }
+
+.split-part {
+    display: flex;
+    align-items: center;
+    min-width: 2px;
+    flex-basis: 0;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    line-height: 14px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Padded inside its own box, so a narrow part keeps its true width instead of the padding's. */
+.split-label {
+    padding: 0 6px;
+}

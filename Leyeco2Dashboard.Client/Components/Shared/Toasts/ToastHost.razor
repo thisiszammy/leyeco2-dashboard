@@ -1,0 +1,83 @@
+@namespace Leyeco2Dashboard.Client.Components.Shared.Toasts
+@implements IDisposable
+
+@* Rendered once, at the layout root (sibling of .app), so toasts are never clipped by
+   ancestor transforms/filters and sit above the modal dim. aria-live lets screen readers
+   announce toasts without moving focus. *@
+<div class="toast-stack" role="status" aria-live="polite">
+    @foreach (var toast in _toasts)
+    {
+        <div class="toast toast-@toast.Level.ToString().ToLowerInvariant() @(_leaving.Contains(toast.Id) ? "toast-leaving" : null)">
+            <span class="toast-icon"><Icon Name="@IconFor(toast.Level)" /></span>
+            <div class="toast-copy">
+                <div class="toast-title">@toast.Title</div>
+                @if (!string.IsNullOrEmpty(toast.Detail))
+                {
+                    <div class="toast-detail">@toast.Detail</div>
+                }
+            </div>
+            <button type="button"
+                    class="toast-close"
+                    aria-label="Dismiss notification"
+                    @onclick="() => DismissAsync(toast.Id)">
+                <Icon Name="x" />
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private const int MaxVisible = 4;
+    private const int AutoDismissMs = 4200;
+    private const int ExitMs = 200;
+
+    private readonly List<ToastMessage> _toasts = new();
+    private readonly HashSet<Guid> _leaving = new();
+
+    [Inject] private ToastService Toasts { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        Toasts.OnPublished += HandlePublished;
+    }
+
+    private void HandlePublished(ToastMessage toast)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            _toasts.Add(toast);
+            while (_toasts.Count > MaxVisible)
+                _toasts.RemoveAt(0);
+            StateHasChanged();
+
+            await Task.Delay(AutoDismissMs);
+            await DismissAsync(toast.Id);
+        });
+    }
+
+    private async Task DismissAsync(Guid id)
+    {
+        // Already gone (dropped for overflow) or already animating out — nothing to do.
+        if (!_toasts.Any(t => t.Id == id) || !_leaving.Add(id))
+            return;
+
+        StateHasChanged();
+        await Task.Delay(ExitMs);
+
+        _toasts.RemoveAll(t => t.Id == id);
+        _leaving.Remove(id);
+        StateHasChanged();
+    }
+
+    private static string IconFor(ToastLevel level) => level switch
+    {
+        ToastLevel.Success => "check",
+        ToastLevel.Error   => "warning",
+        _                  => "info",
+    };
+
+    public void Dispose()
+    {
+        Toasts.OnPublished -= HandlePublished;
+    }
+}

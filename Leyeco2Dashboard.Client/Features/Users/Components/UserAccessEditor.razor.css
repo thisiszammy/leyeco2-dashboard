@@ -1,0 +1,221 @@
+/* UserAccessEditor — one ruled sheet: the All access switch, then each part of the Transaction Monitor with
+   its name and tally in a margin column left of the gold rule, its permissions in two columns. */
+.uae {
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-lg);
+    background: var(--white);
+}
+
+/* ── All access ── */
+.uae-all {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--slate-200);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--slate-50);
+    transition: background var(--t-base) var(--ease-out-quart);
+}
+
+    .uae-all.is-on {
+        background: var(--brand-light);
+    }
+
+.uae-switch {
+    border: none;
+    padding: 0;
+    margin-top: 1px;
+}
+
+    .uae-switch:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px var(--brand-glow);
+    }
+
+    .uae-switch:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+.uae-all-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.uae-all-label {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    line-height: 19px;
+    color: var(--slate-900);
+}
+
+.uae-all.is-on .uae-all-label {
+    color: var(--brand-darker);
+}
+
+.uae-all-help {
+    font-size: var(--fs-micro);
+    line-height: 15px;
+    color: var(--slate-600);
+}
+
+/* ── A part of the Transaction Monitor ── */
+.uae-group {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+}
+
+    .uae-group + .uae-group {
+        border-top: 1px solid var(--slate-150);
+    }
+
+.uae-margin {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 10px 10px 10px 12px;
+    box-shadow: inset -1px 0 0 var(--gold-rule);
+}
+
+.uae-group-name {
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    font-weight: 600;
+    line-height: 19px;
+    color: var(--slate-900);
+}
+
+.uae-group-count {
+    font-size: var(--fs-micro);
+    line-height: 15px;
+    color: var(--slate-500);
+    font-variant-numeric: tabular-nums;
+}
+
+.uae-group-toggle {
+    margin: 3px 0 0 -4px;
+    padding: 1px 4px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--brand-primary);
+    font-family: var(--font-body);
+    font-size: var(--fs-micro);
+    font-weight: 500;
+    line-height: 15px;
+    cursor: pointer;
+}
+
+    .uae-group-toggle:hover {
+        background: var(--brand-light);
+    }
+
+    .uae-group-toggle:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--brand-glow);
+    }
+
+/* ── Its permissions ── */
+.uae-grants {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 8px;
+    padding: 6px 8px;
+}
+
+.uae-grant {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+    .uae-grant:hover {
+        background: var(--slate-50);
+    }
+
+    .uae-grant:has(.uae-check:disabled) {
+        cursor: default;
+    }
+
+        .uae-grant:has(.uae-check:disabled):hover {
+            background: none;
+        }
+
+.uae-check {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    margin: 3px 0 0;
+    accent-color: var(--brand-primary);
+    cursor: inherit;
+}
+
+    .uae-check:focus-visible {
+        outline: 2px solid var(--brand-glow);
+        outline-offset: 2px;
+    }
+
+.uae-grant-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.uae-grant-label {
+    font-size: var(--fs-body);
+    line-height: 19px;
+    color: var(--slate-700);
+}
+
+.uae-grant.is-on .uae-grant-label {
+    font-weight: 500;
+    color: var(--slate-900);
+}
+
+.uae-grant-help {
+    font-size: var(--fs-micro);
+    line-height: 15px;
+    color: var(--slate-500);
+}
+
+/* Under All access every permission is held: the list stays to show what that covers, but
+   reads as settled rather than as boxes to tick. */
+.uae-group.is-covered .uae-grant-label {
+    font-weight: 400;
+    color: var(--slate-600);
+}
+
+@media (max-width: 720px) {
+    .uae-group {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .uae-margin {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 8px;
+        padding: 8px 12px 0;
+        box-shadow: none;
+    }
+
+    .uae-group-toggle {
+        margin: 0 0 0 auto;
+    }
+
+    .uae-grants {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .uae-all {
+        transition: none;
+    }
+}

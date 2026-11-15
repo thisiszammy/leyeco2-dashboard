@@ -1,0 +1,233 @@
+@namespace Leyeco2Dashboard.Client.Features.TransactionInspector.Components
+
+@* The register: a bill a row. Its account and consumer lead, then the bill and the payment, then each book's entry
+   for it (its status, and its amount at the entry's right edge, so the amounts line up down each book), read across
+   to compare them, the verdict last. The margin is the auditor's: a gold tick on its rule for a bill tallied in all
+   three books, a red cross for one that needs someone, a pencil ring for one still waiting, nothing for a payment
+   that never went through; the verdict says the same in words. A payment's bills stand together behind a dotted
+   rule, the payment faded on the rows after its first, as a ledger writes ditto. A row opens the bill in full. *@
+<div class="table-wrap ti-register">
+    <div class="ti-scroll">
+        <table>
+            <caption class="sr-only">@Caption</caption>
+            <colgroup>
+                <col class="ti-w-num" />
+                <col />
+                <col class="ti-w-bill" />
+                <col class="ti-w-payment" />
+                <col class="ti-w-facility" />
+                <col class="ti-w-queue" />
+                <col class="ti-w-ledger" />
+                <col class="ti-w-verdict" />
+                <col class="ti-w-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th rowspan="2" class="ti-pin" scope="col">#</th>
+                    <th rowspan="2" class="ti-pin-2" scope="col">Account</th>
+                    <th rowspan="2" scope="col">Bill</th>
+                    <th rowspan="2" scope="col">Payment</th>
+                    <th class="ti-group" scope="col" id="ti-h-facility">Online facility</th>
+                    <th class="ti-group" scope="col" id="ti-h-queue">Posting queue</th>
+                    <th class="ti-group" scope="col" id="ti-h-ledger">Collections ledger</th>
+                    <th rowspan="2" scope="col">Verdict</th>
+                    <th rowspan="2" scope="col"><span class="sr-only">Open</span></th>
+                </tr>
+                <tr class="ti-head-2" aria-hidden="true">
+                    <th class="ti-stage"><span>Status</span><span>Amount</span></th>
+                    <th class="ti-stage"><span>Status</span><span>Amount</span></th>
+                    <th class="ti-stage"><span>Status</span><span>Amount</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Bills is null)
+                {
+                    for (var i = 0; i < SkeletonRows; i++)
+                    {
+                        <tr aria-hidden="true" class="ti-skel-row">
+                            <td class="row-num ti-pin"><span class="ti-skel w-30" style="margin-left:auto"></span></td>
+                            <td class="ti-pin-2"><span class="ti-skel w-90"></span></td>
+                            <td><span class="ti-skel w-70"></span></td>
+                            <td><span class="ti-skel w-70"></span></td>
+                            <td class="ti-stage"><span class="ti-skel w-90"></span></td>
+                            <td class="ti-stage"><span class="ti-skel w-90"></span></td>
+                            <td class="ti-stage"><span class="ti-skel w-90"></span></td>
+                            <td><span class="ti-skel w-70"></span></td>
+                            <td></td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    for (var index = 0; index < Bills.Count; index++)
+                    {
+                        var bill = Bills[index];
+                        var rowNo = (CurrentPage - 1) * PageSize + index + 1;
+                        var continued = index > 0 && SamePayment(Bills[index - 1], bill);
+                        var continues = index < Bills.Count - 1 && SamePayment(Bills[index + 1], bill);
+                        var mark = InspectionTones.MarginMark(bill.Verdict);
+                        var name = bill.ConsumerName;
+
+                        <tr class="@RowClass(continued, continues)" @key="bill.Id" @onclick="() => OnOpen.InvokeAsync(bill)">
+                            <td class="row-num ti-num ti-pin">
+                                @if (mark is not null)
+                                {
+                                    <span class="ti-mark is-@mark" aria-hidden="true">
+                                        @if (mark == "tallied")
+                                        {
+                                            <Icon Name="check" />
+                                        }
+                                        else if (mark == "attention")
+                                        {
+                                            <Icon Name="x" />
+                                        }
+                                    </span>
+                                }
+                                @rowNo
+                            </td>
+                            <td class="ti-account ti-pin-2">
+                                <div class="ti-acct">
+                                    <span class="ti-acct-no t-code">@bill.AccountNumber</span>
+                                    @if (name is null)
+                                    {
+                                        <span class="ti-name is-unknown" title="The cashiering system has no consumer under this account number">Not on file</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ti-name" title="@(bill.IsDisconnected ? $"{name} (disconnected)" : name)">@name</span>
+                                    }
+                                </div>
+                            </td>
+                            <td class="ti-bill" title="Bill @bill.BillNumber">@InspectionTones.BillPeriod(bill.ServicePeriodEnd)</td>
+                            <td class="ti-payment @(continued ? "is-ditto" : null)"
+                                title="@($"Payment {bill.TransactionId} through {bill.ProviderLabel}, begun {InspectionTones.Stamp(bill.CreatedOn)}")">
+                                <span class="t-code">@bill.TransactionId</span>
+                                <span class="ti-sub">@InspectionTones.Paid(bill.CreatedOn, SingleDay)</span>
+                            </td>
+
+                            <td class="ti-stage" headers="ti-h-facility">
+                                <div class="ti-entry">
+                                    <span class="ti-state @InspectionTones.Facility(bill.Facility.Status)"><span class="ti-state-dot"></span>@bill.Facility.StatusLabel</span>
+                                    <span class="ti-amt">@Figures.Peso(bill.Facility.Total)</span>
+                                </div>
+                            </td>
+
+                            <td class="ti-stage" headers="ti-h-queue" title="@(bill.Queue is { } q ? QueueTitle(q) : null)">
+                                @if (bill.Queue is { } queue)
+                                {
+                                    <div class="ti-entry">
+                                        <span class="ti-state @InspectionTones.Queue(queue.Status)"><span class="ti-state-dot"></span>@queue.StatusLabel</span>
+                                        <span class="ti-amt">@Figures.Peso(queue.Total)</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="ti-pencil">Not queued</span>
+                                }
+                            </td>
+
+                            <td class="ti-stage" headers="ti-h-ledger" title="@(bill.Ledger is { } l ? LedgerTitle(l) : null)">
+                                @if (bill.Ledger is { } ledger)
+                                {
+                                    <div class="ti-entry">
+                                        <span class="ti-state @InspectionTones.Ledger(ledger.Status)"><span class="ti-state-dot"></span>@ledger.StatusLabel</span>
+                                        <span class="ti-amt @(bill.Verdict == InspectionTones.AmountDiffers ? "is-off" : null)">@Figures.Peso(ledger.Total)</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="ti-pencil">Not in the ledger</span>
+                                }
+                            </td>
+
+                            <td class="ti-verdict-cell" title="@VerdictTitle(bill)">
+                                <span class="ti-verdict @InspectionTones.Verdict(bill.Verdict)">@bill.VerdictLabel</span>
+                            </td>
+                            <td class="ti-action">
+                                <button type="button"
+                                        class="table-icon-btn"
+                                        title="Open bill @bill.BillNumber of @bill.AccountNumber"
+                                        aria-label="Open bill @bill.BillNumber of @bill.AccountNumber, @bill.VerdictLabel"
+                                        @ref="_openButtons[bill.Id]"
+                                        @onclick="() => OnOpen.InvokeAsync(bill)"
+                                        @onclick:stopPropagation>
+                                    <Icon Name="eye" />
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer">
+        <span>@FooterText</span>
+        @if (TotalPages > 1)
+        {
+            <Pagination CurrentPage="CurrentPage" TotalPages="TotalPages" CurrentPageChanged="OnPage" />
+        }
+    </div>
+</div>
+
+@code {
+    private readonly Dictionary<int, ElementReference> _openButtons = new();
+
+    /// <summary>The page's bills; null while the first read is under way (skeleton rows).</summary>
+    [Parameter] public IReadOnlyList<InspectedBill>? Bills { get; set; }
+
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int PageSize { get; set; } = 20;
+    [Parameter] public int TotalPages { get; set; } = 1;
+    [Parameter] public string FooterText { get; set; } = string.Empty;
+    [Parameter] public string Caption { get; set; } = "Bills paid online, as each book holds them";
+
+    /// <summary>The period is one day: the payment's time is written alone.</summary>
+    [Parameter] public bool SingleDay { get; set; }
+
+    [Parameter] public int SkeletonRows { get; set; } = 8;
+    [Parameter] public EventCallback<int> OnPage { get; set; }
+    [Parameter] public EventCallback<InspectedBill> OnOpen { get; set; }
+
+    /// <summary>Puts the keyboard back on a bill's Open button (a dialog it opened has closed).</summary>
+    public async Task FocusAsync(int billId)
+    {
+        if (!_openButtons.TryGetValue(billId, out var button))
+            return;
+
+        try { await button.FocusAsync(); }
+        catch (InvalidOperationException) { }
+        catch (Microsoft.JSInterop.JSException) { }
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Only this page's buttons: a stale reference would focus nothing.
+        if (Bills is not null)
+        {
+            foreach (var id in _openButtons.Keys.Except(Bills.Select(bill => bill.Id)).ToList())
+                _openButtons.Remove(id);
+        }
+    }
+
+    private static bool SamePayment(InspectedBill a, InspectedBill b)
+        => a.TransactionId.Length > 0 && string.Equals(a.TransactionId, b.TransactionId, StringComparison.OrdinalIgnoreCase);
+
+    private static string RowClass(bool continued, bool continues)
+        => "ti-row" + (continued ? " is-continued" : string.Empty) + (continues ? " continues" : string.Empty);
+
+    private static string QueueTitle(QueueRecord queue)
+    {
+        var title = $"Queued {InspectionTones.Stamp(queue.QueuedOn)}, status {queue.StatusCode}";
+        if (queue.Entries > 1)
+            title += $"; queued {queue.Entries} times, the latest shown";
+        return queue.Remarks is { } remarks ? $"{title}. {remarks}" : title;
+    }
+
+    private static string LedgerTitle(LedgerRecord ledger)
+        => $"Receipt {ledger.OrNumber ?? "(none)"}, paid {InspectionTones.Day(ledger.DatePaid)}, posted by {ledger.Username ?? "(no account)"} ({ledger.Channel})";
+
+    private static string? VerdictTitle(InspectedBill bill)
+        => bill.Verdict == InspectionTones.AmountDiffers && bill.Difference is decimal difference
+            ? $"The ledger's total is {InspectionTones.Signed(difference)} against the facility's"
+            : null;
+}

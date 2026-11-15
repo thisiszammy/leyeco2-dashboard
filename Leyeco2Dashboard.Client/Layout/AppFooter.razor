@@ -1,0 +1,14 @@
+@* Persistent shell footer — pinned to the bottom of the content area (right of the sidebar).
+   Quiet by design: it frames the shell and carries the build credit without competing with page content.
+   The credit is set as a signatory line: the label, then the names. Each name holds together, so a line too
+   short for both folds before "& …" and the second name sits under the first. *@
+<footer class="app-footer" role="contentinfo">
+    <div class="footer-legal">&copy; @DateTime.Now.Year Leyeco II Transaction Monitor</div>
+    <div class="footer-credit">
+        <span class="credit-label"><span class="credit-tick" aria-hidden="true"></span>Developed by:</span>
+        <span class="credit-names">
+            <span class="credit-name">Engr. Brian Jan Zamoras</span>
+            <span class="credit-pair">&amp; <span class="credit-name">Engr. Michael Jay Zamoras</span></span>
+        </span>
+    </div>
+</footer>

@@ -1,0 +1,79 @@
+@using System.Security.Claims
+@inject NavigationManager Nav
+@inject SessionAuthenticationStateProvider AuthState
+@inject AuthApiClient Auth
+
+@* The signed-in account at the foot of the sidebar, with its password and sign-out one click
+   away. In the rail only the initials and the two buttons show; the name stays readable to screen
+   readers. *@
+<AuthorizeView>
+    <Authorized>
+        <div class="account @(Collapsed ? "is-rail" : null)">
+            <div class="account-avatar" aria-hidden="true" title="@(Collapsed ? AccountTitle(context.User) : null)">@Initials(context.User)</div>
+            <div class="account-meta">
+                <span class="account-name" title="@DisplayName(context.User)">@DisplayName(context.User)</span>
+                <span class="account-handle">@UserHandle(context.User)</span>
+            </div>
+            <div class="account-actions">
+                <button type="button" class="account-btn" aria-label="Change password" title="Change password" @onclick="() => _changingPassword = true">
+                    <Icon Name="key" />
+                </button>
+                <button type="button" class="account-btn account-signout" aria-label="Sign out" title="Sign out" @onclick="LogoutAsync">
+                    <Icon Name="logout" />
+                </button>
+            </div>
+        </div>
+
+        <ChangePasswordModal IsOpen="_changingPassword" OnClose="() => _changingPassword = false" />
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public bool Collapsed { get; set; }
+
+    private bool _changingPassword;
+
+    private async Task LogoutAsync()
+    {
+        try
+        {
+            await Auth.LogoutAsync();
+        }
+        catch (ApiException)
+        {
+            // The API could not end the session, so its cookies may still hold it (a reload would
+            // restore it); this screen signs out regardless.
+        }
+
+        AuthState.MarkSignedOut();
+        Nav.NavigateTo("login");
+    }
+
+    private static string AccountTitle(ClaimsPrincipal user)
+        => $"{DisplayName(user)} {UserHandle(user)}".Trim();
+
+    private static string DisplayName(ClaimsPrincipal user)
+    {
+        var full = $"{user.FindFirst("given_name")?.Value} {user.FindFirst("family_name")?.Value}".Trim();
+        return !string.IsNullOrWhiteSpace(full) ? full : (user.Identity?.Name ?? "User");
+    }
+
+    private static string UserHandle(ClaimsPrincipal user)
+        => string.IsNullOrWhiteSpace(user.Identity?.Name) ? string.Empty : $"@{user.Identity!.Name}";
+
+    private static string Initials(ClaimsPrincipal user)
+    {
+        var given = user.FindFirst("given_name")?.Value;
+        var family = user.FindFirst("family_name")?.Value;
+
+        var initials = string.Concat(
+            !string.IsNullOrWhiteSpace(given) ? given![..1] : string.Empty,
+            !string.IsNullOrWhiteSpace(family) ? family![..1] : string.Empty);
+
+        if (!string.IsNullOrWhiteSpace(initials))
+            return initials.ToUpperInvariant();
+
+        var name = user.Identity?.Name;
+        return string.IsNullOrWhiteSpace(name) ? "U" : name![..1].ToUpperInvariant();
+    }
+}

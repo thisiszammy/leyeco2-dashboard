@@ -1,0 +1,92 @@
+@namespace Leyeco2Dashboard.Client.Features.OnlinePayments.Components
+
+@* Reconciliation, under construction: matching each online payment to its posting in the collections ledger and
+   to the provider's settlement. It is drawn as the console draws what is not on file yet, in pencil: each dashed
+   frame is a figure or register it will carry, named and set where it will sit, so the layout can be judged
+   before the matching is built. The notice is the one thing in ink. Nothing here is a figure: the sketches are
+   aria-hidden, and their words say what each will hold. (It was the first plan of the overall dashboard; the
+   figures that plan drew in pencil beside it, the volume by hour and the sources, are now this page's ink.) *@
+<section class="recon" aria-labelledby="recon-title">
+    <div class="recon-head">
+        <h3 class="section-heading" id="recon-title">Reconciliation</h3>
+        <span class="card-badge badge-amber recon-status"><Icon Name="hardHat" />Under construction</span>
+    </div>
+
+    <div class="recon-notice">
+        <span class="recon-notice-icon" aria-hidden="true"><Icon Name="pencil" /></span>
+        <div class="recon-notice-text">
+            <h4>Reconciliation is still being built</h4>
+            <p>It will match each online payment to its posting in the collections ledger and to the provider's settlement. Until then it is drawn in pencil: each dashed frame below marks a figure or register it will show, where it will sit.</p>
+        </div>
+    </div>
+
+    <div class="kpi-strip recon-pencil" role="group" aria-label="Reconciliation figures, not built yet">
+        <KpiCard Label="Reconciled" Value="—" Sub="Posted and settled" IconName="circleCheck" IconTone="green" />
+        <KpiCard Label="Unmatched" Value="—" Sub="No posting or no settlement" IconName="flag" IconTone="red" />
+        <KpiCard Label="Under review" Value="—" Sub="Amount held for a decision" IconName="pesoSign" IconTone="gold" />
+    </div>
+
+    <div class="recon-row">
+        <section class="panel recon-pencil" aria-labelledby="recon-exceptions">
+            <div class="panel-head">
+                <h3 class="panel-title" id="recon-exceptions">Exceptions to resolve</h3>
+                <span class="panel-sub">Payments with no posting or settlement, and settlements with no payment</span>
+            </div>
+            <p class="sr-only">A register of the exceptions, by reference, provider, date paid, amount and reason. Empty until reconciliation is built.</p>
+            <div class="sketch-register" aria-hidden="true">
+                <div class="sketch-row is-head">
+                    <span class="sketch-num">#</span>
+                    <span>Reference</span>
+                    <span class="col-source">Provider</span>
+                    <span>Paid</span>
+                    <span class="num">Amount</span>
+                    <span class="col-reason">Reason</span>
+                </div>
+                @foreach (var row in ExceptionSketch)
+                {
+                    <div class="sketch-row">
+                        <span class="sketch-num"></span>
+                        <span><i class="stroke" style="width:@(row.Reference)%"></i></span>
+                        <span class="col-source"><i class="stroke" style="width:@(row.Source)%"></i></span>
+                        <span><i class="stroke" style="width:64%"></i></span>
+                        <span class="num"><i class="stroke is-figure" style="width:@(row.Amount)%"></i></span>
+                        <span class="col-reason"><i class="stroke" style="width:@(row.Reason)%"></i></span>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="panel recon-pencil" aria-labelledby="recon-split">
+            <div class="panel-head">
+                <h3 class="panel-title" id="recon-split">Reconciliation</h3>
+                <span class="panel-sub">Of the period's successful payments</span>
+            </div>
+            <div class="panel-body">
+                <div class="sketch-split" aria-hidden="true">
+                    <span class="is-matched" style="flex:7"></span>
+                    <span class="is-review" style="flex:2"></span>
+                    <span class="is-unmatched" style="flex:1"></span>
+                </div>
+                <dl class="sketch-legend">
+                    <div><dt><span class="swatch is-matched" aria-hidden="true"></span>Matched</dt><dd>—</dd></div>
+                    <div><dt><span class="swatch is-review" aria-hidden="true"></span>Under review</dt><dd>—</dd></div>
+                    <div><dt><span class="swatch is-unmatched" aria-hidden="true"></span>Unmatched</dt><dd>—</dd></div>
+                </dl>
+            </div>
+        </section>
+    </div>
+</section>
+
+@code {
+    // The shapes of the sketches only: stroke widths that vary so the rows read as entries. None of it is data.
+    private sealed record ExceptionRow(int Reference, int Source, int Amount, int Reason);
+
+    private static readonly ExceptionRow[] ExceptionSketch =
+    [
+        new(72, 54, 58, 80),
+        new(60, 70, 44, 62),
+        new(78, 48, 66, 74),
+        new(66, 62, 50, 56),
+        new(70, 56, 62, 68),
+    ];
+}

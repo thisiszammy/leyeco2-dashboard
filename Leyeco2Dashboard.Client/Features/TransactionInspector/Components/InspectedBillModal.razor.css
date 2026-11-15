@@ -1,0 +1,220 @@
+/* The bill's dialog: wide enough for three slips side by side, its body scrolling between a header and a footer
+   that stay put. */
+.ti-bill-modal {
+    width: 1040px;
+    overflow: hidden;
+}
+
+.ti-bill-heading {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+    .ti-bill-heading h3 {
+        outline: none;
+    }
+
+.ti-bill-who {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fs-body);
+    font-weight: 500;
+    line-height: 18px;
+    color: var(--slate-600);
+}
+
+.ti-bill-body {
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* The verdict: its word, then the sentence. A rule down its left edge in the verdict's tone, the words in ink. */
+.ti-bill-verdict {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 9px 12px;
+    border: 1px solid var(--slate-200);
+    border-left: 3px solid var(--slate-400);
+    border-radius: var(--radius-md);
+    background: var(--slate-50);
+}
+
+    .ti-bill-verdict p {
+        margin: 0;
+        font-size: var(--fs-body);
+        line-height: 19px;
+        color: var(--slate-900);
+    }
+
+.ti-bill-verdict-label {
+    flex-shrink: 0;
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 19px;
+}
+
+.ti-bill-verdict.is-tallied { border-left-color: var(--green-600); }
+.ti-bill-verdict.is-tallied .ti-bill-verdict-label { color: var(--green-600); }
+.ti-bill-verdict.is-waiting { border-left-color: var(--amber-600); }
+.ti-bill-verdict.is-waiting .ti-bill-verdict-label { color: #B45309; }
+.ti-bill-verdict.is-attention { border-left-color: var(--red-primary); background: var(--red-light); }
+.ti-bill-verdict.is-attention .ti-bill-verdict-label { color: var(--red-primary); }
+.ti-bill-verdict.is-unpaid .ti-bill-verdict-label { color: var(--slate-500); }
+
+/* The slips: one per book, in the payment's order. */
+.ti-slips {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.ti-slip {
+    min-width: 0;
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-lg);
+    background: var(--white);
+}
+
+    .ti-slip h4 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin: 0;
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--slate-150);
+        font-family: var(--font-heading);
+        font-size: var(--fs-title);
+        font-weight: 600;
+        line-height: 20px;
+        color: var(--brand-primary);
+    }
+
+    /* The labels in a margin left of the gold rule, the values in ink beside them. */
+    .ti-slip dl {
+        display: grid;
+        grid-template-columns: 92px minmax(0, 1fr);
+        margin: 0;
+    }
+
+    .ti-slip dt,
+    .ti-slip dd {
+        margin: 0;
+        padding: 4px 10px;
+        font-size: var(--fs-label);
+        line-height: 17px;
+        border-bottom: 1px solid var(--slate-100);
+    }
+
+    .ti-slip dt {
+        color: var(--slate-500);
+        font-weight: 500;
+        box-shadow: inset -1px 0 0 var(--gold-rule);
+    }
+
+    .ti-slip dd {
+        color: var(--slate-900);
+        overflow-wrap: anywhere;
+    }
+
+        .ti-slip dd.num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+    .ti-slip dt:nth-last-of-type(1),
+    .ti-slip dd:last-of-type {
+        border-bottom: none;
+    }
+
+    /* The total, footed as a ledger foots it. */
+    .ti-slip .is-total {
+        font-weight: 600;
+        color: var(--slate-900);
+        border-top: 1px solid var(--slate-700);
+        border-bottom: 3px double var(--slate-700);
+    }
+
+    .ti-slip dd.is-off {
+        color: var(--red-primary);
+    }
+
+    /* A book that holds nothing: its slip left in pencil. */
+    .ti-slip.is-pencil {
+        border-style: dashed;
+        border-color: var(--slate-300);
+        background: none;
+    }
+
+        .ti-slip.is-pencil h4 {
+            color: var(--slate-500);
+            border-bottom-style: dashed;
+            border-bottom-color: var(--slate-300);
+        }
+
+        .ti-slip.is-pencil p {
+            margin: 0;
+            padding: 10px;
+            font-size: var(--fs-label);
+            line-height: 18px;
+            color: var(--slate-600);
+        }
+
+.ti-slip-note {
+    margin: 0;
+    padding: 6px 10px;
+    border-top: 1px solid var(--slate-150);
+    font-size: var(--fs-micro);
+    color: var(--slate-500);
+}
+
+.ti-quiet {
+    color: var(--slate-500);
+}
+
+/* A book's status in a slip's head: the register's own (InspectionRegister.razor.css), scoped here. */
+.ti-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-body);
+    font-size: var(--fs-label);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ti-state-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.ti-state.is-ink { color: var(--slate-900); }
+.ti-state.is-wait { color: #B45309; }
+.ti-state.is-fail { color: var(--red-primary); }
+.ti-state.is-mute { color: var(--slate-500); }
+.ti-state.is-mute .ti-state-dot { background: var(--slate-300); }
+
+.ti-bill-footer {
+    justify-content: space-between;
+}
+
+    .ti-bill-footer > :only-child {
+        margin-left: auto;
+    }
+
+@media (max-width: 900px) {
+    .ti-slips {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ti-bill-verdict {
+        flex-direction: column;
+        gap: 2px;
+    }
+}

@@ -1,0 +1,117 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@if (_authChecked && _isAuthenticated)
+{
+    @* What the account's grants open, for every screen, menu and overlay below; a new one whenever the
+       session changes, so a grant revoked mid-session hides what it opened. *@
+    <CascadingValue Value="_access">
+        @* No top header: the page's own toolbar is the first row of the content, and the account
+           sits at the foot of the sidebar, so every pixel above the fold goes to the records. *@
+        <div class="app @(_navCollapsed ? "nav-collapsed" : null)">
+            <aside class="sidebar">
+                <NavMenu Collapsed="_navCollapsed" OnToggleCollapsed="ToggleNavAsync" />
+            </aside>
+
+            <div class="main-area">
+                <main class="page-content">
+                    <div class="page-body">
+                        @Body
+                    </div>
+                </main>
+
+                <AppFooter />
+            </div>
+        </div>
+
+        @* Portal root for full-viewport overlays (modals, toasts, command palettes).
+           Rendered as a sibling of .app so it can never be clipped by ancestor
+           transforms / filters / containment. See CLAUDE.md → "Overlay Portal". *@
+        <SectionOutlet SectionName="overlay" />
+
+        @* Toast stack lives outside the overlay section (which is last-writer-wins) so an
+           open modal can never evict it. Same clipping guarantee: sibling of .app. *@
+        <ToastHost />
+    </CascadingValue>
+}
+else if (!_authChecked)
+{
+    @* Brief gate while the persisted session is resolved. Unauthenticated users are redirected to
+       /login, so the shell (and any page under @@Body) never renders for them. *@
+    <div class="app-loading">
+        <div class="app-loading-spinner"></div>
+    </div>
+}
+
+@code {
+    // The sidebar's rail/full choice, remembered per browser.
+    private const string NavPreferenceKey = "leyeco2.monitor.sidebar";
+
+    private bool _authChecked;
+    private bool _isAuthenticated;
+    private bool _navCollapsed;
+    private MonitorAccess _access = MonitorAccess.None;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        _navCollapsed = await ReadNavPreferenceAsync();
+        Evaluate(await AuthProvider.GetAuthenticationStateAsync());
+    }
+
+    private void Evaluate(AuthenticationState state)
+    {
+        _isAuthenticated = state.User.Identity?.IsAuthenticated == true;
+        _access = MonitorAccess.From(state.User);
+        _authChecked = true;
+
+        if (!_isAuthenticated)
+            Nav.NavigateTo("login");
+
+        StateHasChanged();
+    }
+
+    // AuthenticationStateChanged can fire off the renderer's sync context (e.g. from logout); marshal
+    // back before touching NavigationManager or the render tree.
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+        => _ = InvokeAsync(async () => Evaluate(await task));
+
+    // A convenience, not state: storage can be blocked or empty (private window, cleared site data). With no
+    // choice remembered, a narrow window (a phone, a split screen) opens on the rail, so the page keeps the width,
+    // and a wide one in full.
+    private async Task<bool> ReadNavPreferenceAsync()
+    {
+        try
+        {
+            var saved = await JS.InvokeAsync<string?>("localStorage.getItem", NavPreferenceKey);
+            if (saved is "rail" or "full")
+                return saved == "rail";
+
+            return await JS.InvokeAsync<bool>("monitorLayout.isNarrow");
+        }
+        catch (JSException)
+        {
+            return false;
+        }
+    }
+
+    private async Task ToggleNavAsync()
+    {
+        _navCollapsed = !_navCollapsed;
+
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", NavPreferenceKey, _navCollapsed ? "rail" : "full");
+        }
+        catch (JSException)
+        {
+            // Not remembered across reloads; the toggle itself still applies.
+        }
+    }
+
+    public void Dispose()
+        => AuthProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+}

@@ -1,0 +1,17 @@
+@namespace Leyeco2Dashboard.Client.Features.Users.Components
+
+@* An account's reach at a glance: one segment per part of the Transaction Monitor, in the sidebar's order, each
+   filled to the share of that part's permissions the account holds. The words beside it say the
+   same, so the meter itself is left out of the accessibility tree. *@
+<span class="uam" aria-hidden="true">
+    @foreach (var share in UserAccess.Footprint(Grants))
+    {
+        <span class="uam-seg" title="@($"{share.Name}: {share.Held} of {share.Of}")">
+            <span class="uam-fill" style="width:@(share.Percent)%"></span>
+        </span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyCollection<string> Grants { get; set; } = Array.Empty<string>();
+}

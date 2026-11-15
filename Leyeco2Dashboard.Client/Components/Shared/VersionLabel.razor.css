@@ -1,0 +1,16 @@
+/* VersionLabel — the Transaction Monitor version as a revision mark: a muted "ver" and the number set as a record code
+   (.t-code: tabular, slashed zero), the same label-then-value voice as the build credit beside it. */
+.version {
+    white-space: nowrap;
+    color: var(--slate-500);
+}
+
+.version-number {
+    color: var(--slate-700);
+    font-weight: 500;
+}
+
+/* Compact (the sidebar's rail): the number alone. */
+.version.is-compact .version-prefix {
+    display: none;
+}

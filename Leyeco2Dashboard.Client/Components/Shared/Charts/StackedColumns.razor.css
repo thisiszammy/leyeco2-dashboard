@@ -1,0 +1,260 @@
+/* StackedColumns: columns on a baseline, each split by series with a 2px white gap between the parts, so
+   neighbouring fills stay apart however close their colours. The axis gutter, the plot and the day labels
+   share one column template, so each label stands under its column. Marks only where there are figures:
+   a day with nothing collected is an empty slot on the baseline, not a sliver. */
+
+.sc {
+    --gutter: 52px;
+    --plot-h: 188px;
+}
+
+.sc-frame {
+    display: grid;
+    grid-template-columns: var(--gutter) minmax(0, 1fr);
+}
+
+/* Figures on the y axis: tabular, right against the plot, each centred on its rule. */
+.sc-yaxis {
+    position: relative;
+    height: var(--plot-h);
+}
+
+    .sc-yaxis span {
+        position: absolute;
+        right: 8px;
+        transform: translateY(50%);
+        font-size: var(--fs-micro);
+        line-height: 14px;
+        color: var(--slate-500);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+.sc-plot {
+    position: relative;
+    height: var(--plot-h);
+    border-bottom: 1px solid var(--slate-300);
+    border-radius: 2px;
+    outline: none;
+}
+
+    .sc-plot:focus-visible {
+        box-shadow: 0 0 0 3px var(--brand-glow);
+    }
+
+/* Guides kept faint, so they never compete with the marks. */
+.sc-grid i {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 1px solid var(--slate-100);
+}
+
+.sc-cols {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+}
+
+.sc-col {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    height: 100%;
+    cursor: default;
+}
+
+    /* The column in hand: a quiet band behind it, the bar itself untouched. */
+    .sc-col.is-active {
+        background: var(--slate-50);
+    }
+
+.sc-stack {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+    width: min(28px, 72%);
+    min-height: 2px;
+    overflow: hidden;
+    border-radius: 3px 3px 0 0;
+}
+
+.sc-seg {
+    flex-basis: 0;
+    min-height: 1px;
+}
+
+/* ── Tooltip: the column's figures, the series top to bottom as the stack reads ── */
+.sc-tip {
+    position: absolute;
+    top: 6px;
+    z-index: 3;
+    min-width: 196px;
+    padding: 6px 8px 5px;
+    background: var(--white);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    pointer-events: none;
+    font-size: var(--fs-label);
+    line-height: 17px;
+}
+
+    .sc-tip.is-after  { transform: translateX(6px); }
+    .sc-tip.is-before { transform: translateX(calc(-100% - 6px)); }
+
+.sc-tip-head {
+    margin-bottom: 3px;
+    font-weight: 600;
+    color: var(--slate-900);
+    white-space: nowrap;
+}
+
+.sc-tip-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--slate-600);
+}
+
+    .sc-tip-row.is-zero {
+        color: var(--slate-400);
+    }
+
+.sc-tip-label {
+    flex: 1;
+    white-space: nowrap;
+}
+
+.sc-tip-value {
+    color: var(--slate-900);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.sc-tip-row.is-zero .sc-tip-value {
+    color: var(--slate-400);
+}
+
+.sc-tip-total {
+    margin-top: 3px;
+    padding-top: 3px;
+    border-top: 1px solid var(--slate-150);
+    font-weight: 600;
+    color: var(--slate-900);
+}
+
+/* ── X axis and key ── */
+.sc-xaxis {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    margin-left: var(--gutter);
+    padding-top: 4px;
+    height: 20px;
+}
+
+    .sc-xaxis span {
+        display: flex;
+        justify-content: center;
+        min-width: 0;
+        font-size: var(--fs-micro);
+        line-height: 14px;
+        color: var(--slate-600);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+
+        .sc-xaxis span.is-quiet {
+            color: var(--slate-400);
+        }
+
+.sc-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 6px 0 0 var(--gutter);
+    list-style: none;
+    font-size: var(--fs-label);
+    line-height: 16px;
+    color: var(--slate-600);
+}
+
+    .sc-legend li {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+/* ── Table view ── */
+.sc-table-wrap {
+    max-height: 420px;
+    overflow: auto;
+    border: 1px solid var(--slate-150);
+    border-radius: var(--radius-md);
+}
+
+/* Five columns of pesos to the centavo in the wide panel's width: narrower cells, a step smaller type. */
+.sc-table th,
+.sc-table td {
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 12.5px;
+}
+
+.sc-table thead th {
+    font-weight: 600;
+}
+
+.sc-table thead th .swatch-dot {
+    margin-right: 2px;
+}
+
+.sc-table tbody th {
+    padding: var(--cell-py) var(--cell-px);
+    font-size: var(--fs-body);
+    font-weight: 500;
+    line-height: 19px;
+    color: var(--slate-900);
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--slate-100);
+}
+
+.sc-table tbody td {
+    padding-top: var(--cell-py);
+    padding-bottom: var(--cell-py);
+}
+
+.sc-table tbody tr.is-empty th,
+.sc-table tbody tr.is-empty td {
+    color: var(--slate-400);
+}
+
+.sc-table .sc-row-total {
+    font-weight: 600;
+}
+
+/* The footing stays in view at the foot of the scrolling table. */
+.sc-table tfoot th,
+.sc-table tfoot td {
+    position: sticky;
+    bottom: 0;
+}
+
+@media (max-width: 640px) {
+    .sc {
+        --gutter: 44px;
+        --plot-h: 160px;
+    }
+
+    .sc-tip {
+        min-width: 168px;
+    }
+
+    .sc-xaxis span.is-minor {
+        visibility: hidden;
+    }
+}

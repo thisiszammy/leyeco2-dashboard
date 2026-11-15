@@ -1,0 +1,604 @@
+/* Login — the console's sign-in. Left: credential card on light. Right: the navy of the cooperative's seal, the seal itself, and the ledger that says what the monitor does. */
+
+.login-boot {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--slate-50);
+}
+
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    background: var(--slate-50);
+}
+
+.login-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 64px;
+    max-width: 560px;
+    animation: fadeSlideUp 0.42s var(--ease-out-quart) both;
+}
+
+.login-right {
+    flex: 1;
+    background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-dark) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 64px;
+    color: var(--brand-light);
+    position: relative;
+    overflow: hidden;
+}
+
+    .login-right::before {
+        content: '';
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.03);
+        top: -200px;
+        right: -200px;
+    }
+
+    .login-right::after {
+        content: '';
+        position: absolute;
+        width: 400px;
+        height: 400px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.04);
+        bottom: -100px;
+        left: -100px;
+    }
+
+/* Brand lockup */
+.login-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 48px;
+}
+
+    .login-logo-row .icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+        .login-logo-row .icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+    .login-logo-row h1 {
+        font-family: var(--font-heading);
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--brand-dark);
+    }
+
+    .login-logo-row span {
+        font-size: var(--fs-label);
+        color: var(--slate-500);
+        display: block;
+    }
+
+/* Form */
+.login-form {
+    width: 100%;
+    max-width: 384px;
+}
+
+    .login-form h2 {
+        font-family: var(--font-heading);
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--slate-900);
+        letter-spacing: -0.3px;
+        margin-bottom: 8px;
+    }
+
+    .login-form p {
+        color: var(--slate-600);
+        font-size: 15px;
+        line-height: 1.5;
+        margin-bottom: 32px;
+    }
+
+.field-group {
+    margin-bottom: 18px;
+}
+
+    .field-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--slate-700);
+        margin-bottom: 8px;
+    }
+
+.field-control {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--white);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-md);
+    transition: border-color 0.15s var(--ease-out-quart),
+                box-shadow 0.15s var(--ease-out-quart);
+}
+
+    .field-control:focus-within {
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 3px var(--brand-glow);
+    }
+
+    .field-control.has-error {
+        border-color: var(--red-primary);
+    }
+
+.field-icon {
+    position: absolute;
+    left: 14px;
+    display: flex;
+    align-items: center;
+    color: var(--slate-400);
+    font-size: 15px;
+    pointer-events: none;
+}
+
+.field-control input {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: transparent;
+    outline: none;
+    padding: 13px 14px 13px 40px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--slate-900);
+}
+
+    .field-control input::placeholder {
+        color: var(--slate-400);
+    }
+
+    .field-control input:disabled {
+        color: var(--slate-500);
+        cursor: not-allowed;
+    }
+
+.field-control.has-toggle input {
+    padding-right: 44px;
+}
+
+.field-toggle {
+    position: absolute;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: none;
+    color: var(--slate-400);
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s var(--ease-out-quart), background 0.15s var(--ease-out-quart);
+}
+
+    .field-toggle:hover {
+        color: var(--slate-600);
+        background: var(--slate-100);
+    }
+
+    .field-toggle:focus-visible {
+        outline: 2px solid var(--brand-primary);
+        outline-offset: 1px;
+    }
+
+/* The rule a new password has to meet, under its field. */
+.field-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--slate-500);
+}
+
+/* The account the new password is for: named in the lead, in the text colour of a value. */
+.login-form p .login-account {
+    font-weight: 600;
+    color: var(--slate-900);
+}
+
+/* Out of the password step, back to the sign-in form. */
+.login-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+    padding: 6px 8px 6px 4px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--brand-primary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s var(--ease-out-quart);
+}
+
+    .login-back:hover:not(:disabled) {
+        background: var(--brand-light);
+    }
+
+    .login-back:focus-visible {
+        outline: 2px solid var(--brand-primary);
+        outline-offset: 1px;
+    }
+
+    .login-back:disabled {
+        color: var(--slate-400);
+        cursor: not-allowed;
+    }
+
+    .login-back ::deep i {
+        font-size: 11px;
+    }
+
+/* Inline error */
+.login-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 18px;
+    padding: 10px 12px;
+    background: var(--red-light);
+    border: 1px solid var(--red-light2);
+    border-radius: var(--radius-md);
+    color: var(--red-darker);
+    font-size: 13px;
+    line-height: 1.4;
+    animation: fadeSlideUp 0.2s var(--ease-out-quart) both;
+}
+
+    .login-error ::deep .fa-triangle-exclamation {
+        color: var(--red-primary);
+        flex-shrink: 0;
+    }
+
+/* Submit */
+.login-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+    padding: 14px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--brand-primary);
+    color: var(--brand-light);
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-brand);
+    transition: background 0.15s var(--ease-out-quart),
+                box-shadow 0.15s var(--ease-out-quart),
+                transform 0.12s var(--ease-out-quart);
+}
+
+    .login-btn:hover:not(:disabled) {
+        background: var(--brand-darker);
+        box-shadow: 0 14px 36px -8px rgba(30, 61, 110,0.36);
+    }
+
+    .login-btn:active:not(:disabled) {
+        transform: translateY(1px);
+    }
+
+    .login-btn:disabled {
+        opacity: 0.75;
+        cursor: default;
+        box-shadow: none;
+    }
+
+.login-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: var(--brand-light);
+    border-radius: 50%;
+    animation: login-spin 0.7s linear infinite;
+}
+
+@keyframes login-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Footer notes */
+.login-secure {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 28px;
+    font-size: 12px;
+    color: var(--slate-500);
+}
+
+    .login-secure ::deep .fa-shield-halved {
+        color: var(--slate-400);
+    }
+
+.login-help {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--slate-500);
+}
+
+/* Build credit — the sign-in panel's footer, set as a signatory block. A hairline frames it off from
+   the functional notes above; the gold tick mirrors the app shell footer. The label takes the first
+   row with the version at its far end; the names sit under the label's words, past the tick. Each
+   name holds together, so a narrow panel folds before "& …" and never inside a name. */
+.login-credit {
+    --credit-indent: 13px; /* the tick (5px) and its gap (8px) */
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "label version"
+        "names names";
+    align-items: baseline;
+    column-gap: 12px;
+    row-gap: 2px;
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid var(--slate-200);
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--slate-500);
+}
+
+    .login-credit .credit-label {
+        grid-area: label;
+        white-space: nowrap;
+    }
+
+    .login-credit .credit-tick {
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        margin-right: 8px;
+        vertical-align: middle;
+        background: var(--gold-primary);
+        border-radius: 1px;
+        transform: rotate(45deg);
+    }
+
+    .login-credit .credit-names {
+        grid-area: names;
+        display: flex;
+        flex-wrap: wrap;
+        column-gap: 4px;
+        padding-left: var(--credit-indent);
+    }
+
+    .login-credit .credit-pair,
+    .login-credit strong {
+        white-space: nowrap;
+    }
+
+    .login-credit strong {
+        color: var(--slate-700);
+        font-weight: 600;
+    }
+
+    .login-credit ::deep .version {
+        grid-area: version;
+    }
+
+/* Right hero */
+.login-hero {
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 420px;
+    animation: fadeSlideUp 0.6s var(--ease-out-quart) 0.1s both;
+}
+
+/* The seal heads the panel; the ledger under it shows what the monitor does. */
+.login-hero-seal {
+    width: 104px;
+    height: 104px;
+    object-fit: contain;
+    margin-bottom: 22px;
+    filter: drop-shadow(0 12px 22px rgba(6, 14, 32, 0.45));
+}
+
+.login-right h3 {
+    font-family: var(--font-heading);
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.login-right p {
+    max-width: 380px;
+    font-size: 15px;
+    line-height: 1.6;
+    opacity: 0.88;
+    text-align: center;
+}
+
+/* ── The ledger: two registers side by side, the gold margin rule between them ──
+   Ruled like the console's tables (32px rows, a header band), in the panel's own light on navy.
+   Each entry is two strokes, its description and its amount, the amount the stronger as a figure is. */
+.ledger {
+    align-self: stretch;
+    margin-top: 36px;
+}
+
+.ledger-sheet {
+    display: grid;
+    grid-template-columns: 1fr 34px 1fr;
+    border: 1px solid rgba(237, 242, 250, 0.16);
+    border-radius: var(--radius-lg);
+    background: rgba(237, 242, 250, 0.05);
+    overflow: hidden;
+}
+
+.ledger-head {
+    padding: 7px 12px;
+    font-size: var(--fs-label);
+    font-weight: 600;
+    line-height: 16px;
+    color: rgba(237, 242, 250, 0.78);
+    background: rgba(237, 242, 250, 0.07);
+    border-bottom: 1px solid rgba(237, 242, 250, 0.14);
+}
+
+    .ledger-head.is-margin {
+        padding: 0;
+    }
+
+.ledger-cell,
+.ledger-mark {
+    height: 32px;
+    border-bottom: 1px solid rgba(237, 242, 250, 0.08);
+}
+
+/* The last row closes on the sheet's own border. */
+.ledger-sheet > :nth-last-child(-n+3) {
+    border-bottom: 0;
+}
+
+.ledger-cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 12px;
+}
+
+.ledger-ink,
+.ledger-amount {
+    display: block;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(237, 242, 250, 0.36);
+}
+
+.ledger-amount {
+    background: rgba(237, 242, 250, 0.8);
+}
+
+/* Pencil: the place a settlement would sit, left empty and dashed, as the console draws what is not on file. */
+.ledger-cell.is-pencil::before {
+    content: '';
+    position: absolute;
+    inset: 5px 8px;
+    border: 1px dashed rgba(255, 218, 212, 0.78);
+    border-radius: var(--radius-sm);
+}
+
+/* The margin: one gold hairline down the middle, each verdict set on it. */
+.ledger-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(var(--gold-rule), var(--gold-rule)) center / 1px 100% no-repeat;
+}
+
+    .ledger-mark ::deep i {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: var(--radius-full);
+        font-size: 9px;
+        animation: ledger-mark-in 0.26s var(--ease-out-quart) var(--mark-delay, 0ms) both;
+    }
+
+    .ledger-mark.is-matched ::deep i {
+        background: var(--brand-dark);
+        color: var(--gold-primary);
+        box-shadow: 0 0 0 1px var(--gold-rule);
+    }
+
+    /* Red warns: the one entry nothing settles. */
+    .ledger-mark.is-flagged ::deep i {
+        background: var(--red-light2);
+        color: var(--red-darker);
+    }
+
+.ledger figcaption {
+    margin-top: 10px;
+    font-size: var(--fs-label);
+    line-height: 1.45;
+    text-align: center;
+    color: rgba(237, 242, 250, 0.72);
+}
+
+/* The page's one moment: the verdicts land down the margin, after the panel settles. */
+@keyframes ledger-mark-in {
+    from {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .login-right {
+        display: none;
+    }
+
+    .login-left {
+        max-width: 100%;
+        padding: 40px 24px;
+    }
+
+    .login-form {
+        margin: 0 auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-left,
+    .login-hero,
+    .login-error,
+    .ledger-mark ::deep i {
+        animation: none;
+    }
+
+    .field-control,
+    .login-btn,
+    .field-toggle {
+        transition: none;
+    }
+}
